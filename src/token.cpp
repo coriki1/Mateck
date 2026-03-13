@@ -1,10 +1,11 @@
 #include <vector>
 #include <string>
 #include <cctype>
+#include <regex>
 #include "token.h"
 
 
-Token::Token(std::string v, TokenType t) : value(v), type(t) {}
+Token::Token(TokenType t, std::string v) : type(t), value(v) {}
 
 TokenType Lexer::GetTokenType(char c) const {
 
@@ -29,25 +30,24 @@ TokenType Lexer::GetTokenType(char c) const {
 
 }
 
-std::vector<Token> Lexer::Tokenize(std::string expression) {
-
+std::vector<Token> Lexer::Tokenize(const std::string& e) {
+    std::string expression = std::regex_replace(e, std::regex(" "), "");
     std::vector<Token> TokenArr;
     TokenType CurrentType;
     std::string CurrentValue;
-    int counter = 0;
+    int i = 0;
 
-    for (int i = 0; i < expression.length(); i++) {
+    while (i < expression.size()) {
 
-        counter = 0;
         CurrentValue = "";
-        CurrentType == GetTokenType(expression[i]);
+        CurrentType = GetTokenType(expression[i]);
        
-        for (int j = i; GetTokenType(expression[j]) != CurrentType; j++) {
-            CurrentValue += expression[j];
-            counter++;
+        while (i < expression.size() && CurrentType == GetTokenType(expression[i])) {
+            CurrentValue += expression[i];
+            i++;
         }
         
-        TokenArr.push_back(Token(CurrentValue, CurrentType));
-        i += counter;
+        TokenArr.push_back(Token(CurrentType, CurrentValue));
     }
+    return TokenArr;
 }
