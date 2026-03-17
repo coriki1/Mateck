@@ -1,8 +1,9 @@
+#pragma once
+
+#include <iostream>
 #include <string>
 #include <vector>
 
-#ifndef TOKEN_H
-#define TOKEN_H
 
 enum class TokenType {
     NUM,
@@ -16,16 +17,20 @@ enum class TokenType {
 };
 
 class Token {
-    std::string value;
     TokenType type;
+    std::string value;
 public:
-    Token(std::string v, TokenType t);
+    Token(TokenType t, std::string v);
+
+    std::string GetValue() const;
+    TokenType GetType() const;
+
+
+    void print() const;
 };
 
 class Lexer {
 public:
     TokenType GetTokenType(char c) const;
-    std::vector<Token> Tokenize(std::string expression);
+    std::vector<Token> Tokenize(const std::string& e);
 };
-
-#endif

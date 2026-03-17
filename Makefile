@@ -1,6 +1,6 @@
 # Compiler
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Werror  -Iinclude
 
 # Források
 SRC = src/node.cpp src/token.cpp main.cpp
@@ -24,7 +24,7 @@ $(TARGET): $(OBJ)
 
 # Tisztítás
 clean:
-	rm -f $(OBJ) $(TARGET)
+	del /F /Q src\*.o mateck.exe
 
 # Újrafordítás teljesen
 rebuild: clean all

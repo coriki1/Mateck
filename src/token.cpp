@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <string>
 #include <cctype>
@@ -35,12 +36,13 @@ std::vector<Token> Lexer::Tokenize(const std::string& e) {
     std::vector<Token> TokenArr;
     TokenType CurrentType;
     std::string CurrentValue;
-    int i = 0;
+    size_t i = 0;
 
     while (i < expression.size()) {
 
         CurrentValue = "";
         CurrentType = GetTokenType(expression[i]);
+
        
         while (i < expression.size() && CurrentType == GetTokenType(expression[i])) {
             CurrentValue += expression[i];
@@ -50,4 +52,28 @@ std::vector<Token> Lexer::Tokenize(const std::string& e) {
         TokenArr.push_back(Token(CurrentType, CurrentValue));
     }
     return TokenArr;
+}
+
+std::string Token::GetValue() const {
+    return value;
+}
+TokenType Token::GetType() const {
+    return type;
+}
+//temp function, majd kesobb 
+inline std::string TokenTypeToString(TokenType t) {
+    switch(t) {
+        case TokenType::NUM:        return "NUM";
+        case TokenType::OP:         return "OP";
+        case TokenType::VAR:        return "VAR";
+        case TokenType::FUNC:       return "FUNC";
+        case TokenType::LPAREN:     return "LPAREN";
+        case TokenType::RPAREN:     return "RPAREN";
+        case TokenType::IDENTIFIER: return "IDENTIFIER";
+    }
+    return "UNKNOWN";
+}
+
+void Token::print() const {
+    std::cout << value << " : " <<TokenTypeToString(type) << std::endl;
 }
