@@ -6,19 +6,51 @@ static const std::unordered_set<std::string> FUNCTIONS = {
     "arcsin", "arccos", "arctan", "arccot",
     "sinh", "cosh", "tanh", "coth",
     "asinh", "acosh", "atanh", "acoth",
-    "ln", "log", "log2", "sqrt", "abs",
+    "ln", "log", "sqrt", "abs",
     "floor", "ceil", "round"
 };
 
 
-std::vector<Token> Lexer::tokenize() {
+std::vector<Token> Lexer::tokenize() { /// state machine thingy ///
+    std::vector<Token> Tokens;
+
+    while (current != '\0') {
+
+        if (isdigit(current)) {
+            Tokens.push_back(readNumber());
+        }
+        else if (isalpha(current)) {
+            Tokens.push_back(readIdentifier());
+        }
+        else if (isOperator(current)) {
+            Tokens.push_back(Token(TokenType::OPERATOR, std::string(1, current)));
+            advance();
+        }
+        else if (current == '(') {
+            Tokens.push_back(Token(TokenType::LPAREN, "("));
+            advance();
+        }
+        else if (current == ')') {
+            Tokens.push_back(Token(TokenType::RPAREN, ")"));
+            advance();
+        }
+        else if (isspace(current)) {
+            skipWhitespace();
+        }
+        else {
+            throw std::runtime_error("Unsupported character: " + std::string(1, current));
+        }
+
+    }
+
+    return Tokens;
 
 }
 
 void Lexer::advance() {
 
     if (pos < input.size()) {
-        current = input[pos++];
+        current = input[++pos];
     } 
     else {
         current = '\0';

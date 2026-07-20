@@ -12,7 +12,6 @@ class Lexer {
     char current;
 public:
 
-     
     Lexer(const std::string& in) : input(in), pos(0), current(in.empty() ? '\0' : in[0]) {} 
     
     void advance();
@@ -22,15 +21,8 @@ public:
     Token readNumber();
     Token readIdentifier();
 
+    bool isOperator(char c) const { return c == '+' || c == '-' || c == '*' || c == '/' || c == '^'; }
+
     std::vector<Token> tokenize();
     
-private:
-    static const std::unordered_set<std::string> FUNCTIONS = {
-    "sin", "cos", "tan", "cot",
-    "arcsin", "arccos", "arctan", "arccot",
-    "sinh", "cosh", "tanh", "coth",
-    "asinh", "acosh", "atanh", "acoth",
-    "ln", "log", "log2", "sqrt", "abs",
-    "floor", "ceil", "round"
-};
 };

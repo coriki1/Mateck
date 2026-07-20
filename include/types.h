@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+
 
 enum class TokenType {
     NUMBER,
@@ -36,8 +38,10 @@ enum class FunctionType {
 
     LN,     /// BASE E LOG
     LOG,    /// BASE 10 LOG
-    LOG2,   /// BASE 2 LOG
+    LOG2,   /// BASE 2 LOG (not used yet)
 
     SQRT, ABS, FLOOR, CEIL, ROUND
 
 };
+
+std::string tokenTypeToString(TokenType t);

@@ -13,5 +13,6 @@ public:
     /// GETTERS ///
     TokenType getType() const { return type; }
     std::string getValue() const { return value; }
+    void print() const;
 
 };
