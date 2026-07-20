@@ -1,36 +1,17 @@
 #pragma once
 
+#include "types.h"
 #include <iostream>
-#include <string>
-#include <vector>
-
-
-enum class TokenType {
-    NUM,
-    OP,
-    VAR,
-    FUNC,
-    LPAREN,
-    RPAREN,
-////// IDENTIFIER: FUNCTION OR VARIABLE, UP TO FURTHER EVALUATION //////
-    IDENTIFIER
-};
 
 class Token {
     TokenType type;
     std::string value;
 public:
-    Token(TokenType t, std::string v);
-
-    std::string GetValue() const;
-    TokenType GetType() const;
+    Token(TokenType t, std::string val) : type(t), value(val) {}
 
 
-    void print() const;
-};
+    /// GETTERS ///
+    TokenType getType() const { return type; }
+    std::string getValue() const { return value; }
 
-class Lexer {
-public:
-    TokenType GetTokenType(char c) const;
-    std::vector<Token> Tokenize(const std::string& e);
 };
