@@ -1,6 +1,6 @@
 # Compiler
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Werror  -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Werror -Wextra -Iinclude
 
 # Források
 SRC = src/types.cpp src/node.cpp src/token.cpp src/lexer.cpp main.cpp

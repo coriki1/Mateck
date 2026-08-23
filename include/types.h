@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 
+using Environment = std::unordered_map<std::string, double>;
 
 enum class TokenType {
     NUMBER,
