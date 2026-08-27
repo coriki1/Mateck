@@ -86,25 +86,32 @@ Token Lexer::readNumber() {
         }
 
         value += current;
-        advance();
+        advance(); 
+        
     }
     
     return Token(TokenType::NUMBER, value);
 }
 
-Token Lexer::readIdentifier() {
-    std::string value = "";
+Token Lexer::readIdentifier() { //updated so character chains are broken into individual variables
 
+    std::string value = "";
     while (isalpha(current)) {
         value += current;
         advance();
     }
-    
+
     if (FUNCTIONS.count(value)) {
         return Token(TokenType::FUNCTION, value);
     }
-    else {
-        return Token(TokenType::VARIABLE, value);
+
+
+    if (value.size() > 1) {
+
+        pos -= (value.size() - 1);
+        current = input[pos];
+        value = value.substr(0, 1);
     }
 
+    return Token(TokenType::VARIABLE, value);
 }

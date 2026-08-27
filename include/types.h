@@ -40,7 +40,7 @@ enum class FunctionType {
 
     LN,     /// BASE E LOG
     LOG,    /// BASE 10 LOG
-    LOG2,   /// BASE 2 LOG (not used yet)
+
 
     SQRT, ABS, FLOOR, CEIL, ROUND
 

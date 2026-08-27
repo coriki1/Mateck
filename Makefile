@@ -24,7 +24,9 @@ $(TARGET): $(OBJ)
 
 # Tisztítás
 clean:
-	del /F /Q src\*.o mateck.exe
+	rm -f $(OBJ) $(TARGET)
 
 # Újrafordítás teljesen
 rebuild: clean all
+
+.PHONY: all clean rebuild
