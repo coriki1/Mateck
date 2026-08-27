@@ -3,8 +3,11 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Werror -Wextra -Iinclude
 
 # Források
-SRC = src/types.cpp src/node.cpp src/token.cpp src/lexer.cpp main.cpp
-
+SRC = src/types.cpp src/token.cpp src/lexer.cpp \
+      src/node_number.cpp src/node_var.cpp \
+      src/node_binaryop.cpp src/node_unaryop.cpp src/node_func.cpp \
+      main.cpp
+	  
 # Objektumok
 OBJ = $(SRC:.cpp=.o)
 
