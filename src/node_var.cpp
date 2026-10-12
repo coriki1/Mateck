@@ -28,3 +28,20 @@ std::unique_ptr<Node> VarNode::clone() const {
 bool VarNode::isConstant(const std::string& var) const {
     return name != var;
 }
+
+std::unique_ptr<Node> VarNode::simplifyStep() const {
+    return clone();
+}
+
+std::string VarNode::toString() const {
+    return name;
+}
+
+int VarNode::precedence() const {
+    return Precedence::ATOM;
+}
+
+bool VarNode::equals(const Node& other) const {
+    auto* o = dynamic_cast<const VarNode*>(&other);
+    return o && name == o->name;
+}

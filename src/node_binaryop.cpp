@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
+#include "simplify.h"
 
 /// BINARYOPNODE DEFINITIONS ////////////////////////////////////////////////////////////
 
@@ -177,3 +178,77 @@ bool BinaryOpNode::isConstant(const std::string& var) const {
     return (left->isConstant(var) && right->isConstant(var));
 }
 
+std::unique_ptr<Node> BinaryOpNode::simplifyStep() const {
+
+    std::unique_ptr<Node> l = left->simplifyStep();
+    std::unique_ptr<Node> r = right->simplifyStep();
+
+    std::optional<double> lv = l->numericValue();
+    std::optional<double> rv = r->numericValue();
+
+    if (lv && rv) { // 2 * 3 -> 6, but 1 / 0 stays as it is
+        double v = BinaryOpNode(op, l->clone(), r->clone()).evaluate(Environment{});
+        if (std::isfinite(v)) {
+            return std::make_unique<NumberNode>(v);
+        }
+    }
+
+    auto simplified = std::make_unique<BinaryOpNode>(op, std::move(l), std::move(r));
+
+    switch (op) {
+        case BinaryOperator::ADD:
+        case BinaryOperator::SUB: return simplifySum(*simplified);       // x + 1 - x -> 1
+        case BinaryOperator::MUL:
+        case BinaryOperator::DIV: return simplifyProduct(*simplified);   // 2 * (3 * x) -> 6 * x
+
+        case BinaryOperator::POW:
+            if (rv == 0.0) return std::make_unique<NumberNode>(1.0);   // f^0 -> 1
+            if (rv == 1.0) return std::move(simplified->left);            // f^1 -> f
+            if (lv == 1.0) return std::make_unique<NumberNode>(1.0);   // 1^f -> 1
+            break;
+    }
+
+    return simplified;
+}
+
+std::string BinaryOpNode::toString() const {
+
+    int p = precedence();
+
+    // ^ is right-associative: (a^b)^c needs parentheses on the left,
+    // - and / are not associative: a - (b + c) and a / (b * c) need them on the right
+    bool leftParens  = left->precedence() < p
+                    || (op == BinaryOperator::POW && left->precedence() == p);
+    bool rightParens = right->precedence() < p
+                    || (right->precedence() == p && (op == BinaryOperator::SUB || op == BinaryOperator::DIV));
+
+    std::string symbol;
+    switch (op) {
+        case BinaryOperator::ADD: symbol = " + "; break;
+        case BinaryOperator::SUB: symbol = " - "; break;
+        case BinaryOperator::MUL: symbol = " * "; break;
+        case BinaryOperator::DIV: symbol = " / "; break;
+        case BinaryOperator::POW: symbol = "^";   break;
+    }
+
+    std::string l = left->toString();
+    std::string r = right->toString();
+
+    return (leftParens ? "(" + l + ")" : l) + symbol + (rightParens ? "(" + r + ")" : r);
+}
+
+int BinaryOpNode::precedence() const {
+    switch (op) {
+        case BinaryOperator::ADD:
+        case BinaryOperator::SUB: return Precedence::ADDITIVE;
+        case BinaryOperator::MUL:
+        case BinaryOperator::DIV: return Precedence::MULTIPLICATIVE;
+        case BinaryOperator::POW: return Precedence::POWER;
+    }
+    throw std::runtime_error("Unknown binary operator");
+}
+
+bool BinaryOpNode::equals(const Node& other) const {
+    auto* o = dynamic_cast<const BinaryOpNode*>(&other);
+    return o && op == o->op && *left == *o->left && *right == *o->right;
+}

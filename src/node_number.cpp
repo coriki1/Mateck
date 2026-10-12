@@ -1,4 +1,5 @@
 #include "node.h"
+#include <sstream>
 #include <cmath>
 
 /// NUMBERNODE DEFINITIONS //////////////////////////////////////////////////////////////
@@ -17,4 +18,28 @@ bool NumberNode::isConstant(const std::string& ) const {
     return true;
 }
 
+std::unique_ptr<Node> NumberNode::simplifyStep() const {
+    return clone();
+}
 
+std::string NumberNode::toString() const {
+    if (value == 0.0) { // avoid printing "-0"
+        return "0";
+    }
+    std::ostringstream out;
+    out << value;
+    return out.str();
+}
+
+int NumberNode::precedence() const {
+    return value < 0 ? Precedence::UNARY : Precedence::ATOM; // -1^2 would read as -(1^2)
+}
+
+std::optional<double> NumberNode::numericValue() const {
+    return value;
+}
+
+bool NumberNode::equals(const Node& other) const {
+    std::optional<double> o = other.numericValue();
+    return o && value == *o;
+}

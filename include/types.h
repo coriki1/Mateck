@@ -47,3 +47,4 @@ enum class FunctionType {
 };
 
 std::string tokenTypeToString(TokenType t);
+std::string functionTypeToString(FunctionType f);

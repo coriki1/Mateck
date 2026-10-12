@@ -344,3 +344,30 @@ std::unique_ptr<Node> FuncNode::clone() const {
 bool FuncNode::isConstant(const std::string& var) const {
     return (arg->isConstant(var));
 }
+
+std::unique_ptr<Node> FuncNode::simplifyStep() const {
+
+    std::unique_ptr<Node> a = arg->simplifyStep();
+
+    if (a->numericValue()) { // sin(0) -> 0, but ln(0) or sqrt(-1) stay as they are
+        double v = FuncNode(func, a->clone()).evaluate(Environment{});
+        if (std::isfinite(v)) {
+            return std::make_unique<NumberNode>(v);
+        }
+    }
+
+    return std::make_unique<FuncNode>(func, std::move(a));
+}
+
+std::string FuncNode::toString() const {
+    return functionTypeToString(func) + "(" + arg->toString() + ")";
+}
+
+int FuncNode::precedence() const {
+    return Precedence::ATOM;
+}
+
+bool FuncNode::equals(const Node& other) const {
+    auto* o = dynamic_cast<const FuncNode*>(&other);
+    return o && func == o->func && *arg == *o->arg;
+}

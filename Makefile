@@ -6,6 +6,7 @@ CXXFLAGS = -std=c++17 -Wall -Werror -Wextra -Iinclude -MMD -MP
 SRC = src/types.cpp src/token.cpp src/lexer.cpp \
       src/node_number.cpp src/node_var.cpp \
       src/node_binaryop.cpp src/node_unaryop.cpp src/node_func.cpp \
+      src/simplify.cpp \
       main.cpp
 	  
 # Objektumok

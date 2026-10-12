@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
+#include "simplify.h"
 
 /// UNARYOPNODE DEFINITIONS //////////////////////////////////////////////////////////////////////////////
 
@@ -35,3 +36,38 @@ bool UnaryOpNode::isConstant(const std::string& var) const {
     return (arg->isConstant(var));
 }
 
+std::unique_ptr<Node> UnaryOpNode::simplifyStep() const {
+
+    std::unique_ptr<Node> a = arg->simplifyStep();
+
+    if (op == UnaryOperator::ADD) { // +f -> f
+        return a;
+    }
+
+    if (auto v = a->numericValue()) { // -(3) -> -3
+        return std::make_unique<NumberNode>(-*v);
+    }
+
+    // -(-f) -> f, -(x + 1) -> -x - 1, -(2 * x) -> -2 * x
+    return simplifySum(UnaryOpNode(op, std::move(a)));
+}
+
+std::string UnaryOpNode::toString() const {
+
+    std::string sign = (op == UnaryOperator::SUB) ? "-" : "+";
+
+    // "--x" would be confusing, so a nested unary operator also gets parentheses
+    if (arg->precedence() <= Precedence::UNARY) {
+        return sign + "(" + arg->toString() + ")";
+    }
+    return sign + arg->toString();
+}
+
+int UnaryOpNode::precedence() const {
+    return Precedence::UNARY;
+}
+
+bool UnaryOpNode::equals(const Node& other) const {
+    auto* o = dynamic_cast<const UnaryOpNode*>(&other);
+    return o && op == o->op && *arg == *o->arg;
+}

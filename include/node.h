@@ -2,10 +2,21 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "types.h"
 
+
+/// PRECEDENCE LEVELS (higher binds tighter) //////////////////////////////////////////
+
+namespace Precedence {
+    constexpr int ADDITIVE       = 1;  // + -
+    constexpr int MULTIPLICATIVE = 2;  // * /
+    constexpr int UNARY          = 3;  // -x
+    constexpr int POWER          = 4;  // ^
+    constexpr int ATOM           = 5;  // numbers, variables, function calls
+}
 
 /// PARENT CLASS : NODE /////////////////////////////////////////////////////////////////
 
@@ -17,7 +28,26 @@ public:
     virtual std::unique_ptr<Node> differentiate(const std::string& var) const = 0;
     virtual std::unique_ptr<Node> clone() const = 0;
     virtual bool isConstant(const std::string& var) const = 0;
+    virtual std::string toString() const = 0;
+
+    // structural equality: same node types, operators and values in the same shape
+    virtual bool equals(const Node& other) const = 0;
+
+    // simplifies until the tree stops changing (see simplify.cpp)
+    std::unique_ptr<Node> simplify() const;
+
+    // one bottom-up simplification pass, used by simplify()
+    virtual std::unique_ptr<Node> simplifyStep() const = 0;
+
+    // binding strength, used by toString() to decide where parentheses are needed
+    virtual int precedence() const = 0;
+
+    // the value of the node if it is a plain number, used by simplify()
+    virtual std::optional<double> numericValue() const { return std::nullopt; }
 };
+
+inline bool operator==(const Node& a, const Node& b) { return a.equals(b); }
+inline bool operator!=(const Node& a, const Node& b) { return !a.equals(b); }
 
 /// CHILD CLASS : NUMBERNODE ///////////////////////////////////////////////////////////
 
@@ -32,6 +62,11 @@ public:
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
     bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
+    std::optional<double> numericValue() const override;
 };
 
 /// CHILD CLASS : VARNODE ///////////////////////////////////////////////////////////
@@ -47,6 +82,10 @@ public:
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
     bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
 
 
 };
@@ -63,10 +102,19 @@ public:
     BinaryOpNode(BinaryOperator o, std::unique_ptr<Node> l, std::unique_ptr<Node> r) 
         : op(o), left(std::move(l)), right(std::move(r)) {}
 
+    /// GETTERS ///
+    BinaryOperator getOp() const { return op; }
+    const Node& getLeft() const { return *left; }
+    const Node& getRight() const { return *right; }
+
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
     bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
 
 // operator differentiations (helper functions)
 
@@ -94,10 +142,18 @@ public:
     UnaryOpNode(UnaryOperator o, std::unique_ptr<Node> a)
         : op(o), arg(std::move(a)) {}
 
+    /// GETTERS ///
+    UnaryOperator getOp() const { return op; }
+    const Node& getArg() const { return *arg; }
+
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
     bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
 };
 
 /// CHILD CLASS : FUNCNODE ///////////////////////////////////////////////////////////
@@ -114,6 +170,10 @@ public:
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
     bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
 
 private: 
 
