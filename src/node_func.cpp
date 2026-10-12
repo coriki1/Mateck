@@ -1,10 +1,11 @@
 #include <cmath>
+#include <stdexcept>
 #include "node.h"
 
 namespace {
 
     double cot(double x)   { return 1.0 / std::tan(x); }
-    double acot(double x)  { return std::atan(1.0 / x); }
+    double acot(double x)  { return std::atan2(1.0, x); } // range (0, pi)
     double coth(double x)  { return 1.0 / std::tanh(x); }
     double acoth(double x) { return std::atanh(1.0 / x); }
     
@@ -57,6 +58,11 @@ double FuncNode::evaluate(const Environment& env) const {
 
 
 std::unique_ptr<Node> FuncNode::differentiate(const std::string& var) const {
+
+    if (isConstant(var)) { // avoids 0 * inf = NaN when the subtree does not depend on var
+        return std::make_unique<NumberNode>(0.0);
+    }
+
     switch (func) {
         // trigonometric functions
         case FunctionType::SIN:    return differentiateSin(var);
@@ -332,7 +338,7 @@ std::unique_ptr<Node> FuncNode::differentiateAbs(const std::string& var) const {
 }
 
 std::unique_ptr<Node> FuncNode::clone() const {
-    return std::make_unique<FuncNode>(func, std::move(arg->clone()));
+    return std::make_unique<FuncNode>(func, arg->clone());
 }
 
 bool FuncNode::isConstant(const std::string& var) const {

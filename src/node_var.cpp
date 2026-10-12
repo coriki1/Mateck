@@ -1,4 +1,5 @@
 #include <cmath>
+#include <stdexcept>
 #include "node.h"
 
 /// VARNODE DEFINITIONS /////////////////////////////////////////////////////////////////

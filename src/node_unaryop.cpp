@@ -1,4 +1,5 @@
 #include <cmath>
+#include <stdexcept>
 #include "node.h"
 
 /// UNARYOPNODE DEFINITIONS //////////////////////////////////////////////////////////////////////////////
@@ -16,6 +17,10 @@ double UnaryOpNode::evaluate(const Environment& env) const {
 }
 
 std::unique_ptr<Node> UnaryOpNode::differentiate(const std::string& var) const {
+
+    if (isConstant(var)) { // avoids 0 * inf = NaN when the subtree does not depend on var
+        return std::make_unique<NumberNode>(0.0);
+    }
 
     std::unique_ptr<Node> argDifferentiated = arg->differentiate(var);
     return std::make_unique<UnaryOpNode>(op, std::move(argDifferentiated));

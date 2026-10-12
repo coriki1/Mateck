@@ -1,4 +1,5 @@
 #include <cmath>
+#include <stdexcept>
 #include "node.h"
 
 /// BINARYOPNODE DEFINITIONS ////////////////////////////////////////////////////////////
@@ -22,6 +23,10 @@ double BinaryOpNode::evaluate(const Environment& env) const {
 }
 
 std::unique_ptr<Node> BinaryOpNode::differentiate(const std::string& var) const {
+
+    if (isConstant(var)) { // avoids 0 * inf = NaN when the subtree does not depend on var
+        return std::make_unique<NumberNode>(0.0);
+    }
 
     switch (op) {
         case BinaryOperator::ADD: 

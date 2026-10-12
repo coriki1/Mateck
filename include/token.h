@@ -2,12 +2,13 @@
 
 #include "types.h"
 #include <iostream>
+#include <utility>
 
 class Token {
     TokenType type;
     std::string value;
 public:
-    Token(TokenType t, std::string val) : type(t), value(val) {}
+    Token(TokenType t, std::string val) : type(t), value(std::move(val)) {}
 
 
     /// GETTERS ///

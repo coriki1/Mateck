@@ -7,12 +7,12 @@
 #include <unordered_set>
 
 class Lexer {
-    const std::string& input;
+    std::string input;
     size_t pos;
     char current;
 public:
 
-    Lexer(const std::string& in) : input(in), pos(0), current(in.empty() ? '\0' : in[0]) {} 
+    Lexer(std::string in) : input(std::move(in)), pos(0), current(input.empty() ? '\0' : input[0]) {}
     
     void advance();
     char peek() const;

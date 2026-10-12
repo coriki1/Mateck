@@ -1,6 +1,6 @@
 # Compiler
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Werror -Wextra -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Werror -Wextra -Iinclude -MMD -MP
 
 # Források
 SRC = src/types.cpp src/token.cpp src/lexer.cpp \
@@ -10,6 +10,7 @@ SRC = src/types.cpp src/token.cpp src/lexer.cpp \
 	  
 # Objektumok
 OBJ = $(SRC:.cpp=.o)
+DEP = $(OBJ:.o=.d)
 
 # Célnév
 TARGET = mateck
@@ -27,9 +28,12 @@ $(TARGET): $(OBJ)
 
 # Tisztítás
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(OBJ) $(DEP) $(TARGET)
 
 # Újrafordítás teljesen
 rebuild: clean all
 
 .PHONY: all clean rebuild
+
+# Header-függőségek (-MMD generálja)
+-include $(DEP)

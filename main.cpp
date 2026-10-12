@@ -1,4 +1,5 @@
 #include "node.h"
+#include "lexer.h"
 
 #include <iostream>
 #include <cmath>
@@ -20,6 +21,30 @@ void checkBool(const std::string& label, bool actual, bool expected) {
     if (ok) passed++;
     std::cout << (ok ? "[PASS] " : "[FAIL] ") << label
                << " (elvart: " << expected << ", kapott: " << actual << ")\n";
+}
+
+void checkStr(const std::string& label, const std::string& actual, const std::string& expected) {
+    total++;
+    bool ok = (actual == expected);
+    if (ok) passed++;
+    std::cout << (ok ? "[PASS] " : "[FAIL] ") << label
+               << " (elvart: " << expected << ", kapott: " << actual << ")\n";
+}
+
+// tokenek tomor szoveges alakja, pl. "F(sin) V(x)"
+std::string lex(const std::string& input) {
+    std::string result;
+    try {
+        Lexer lexer(input);
+        for (const Token& t : lexer.tokenize()) {
+            if (!result.empty()) result += " ";
+            result += tokenTypeToString(t.getType()).substr(0, 1) + "(" + t.getValue() + ")";
+        }
+    }
+    catch (const std::exception&) {
+        return "HIBA";
+    }
+    return result;
 }
 
 int main() {
@@ -101,6 +126,55 @@ int main() {
         auto cloned = original.clone();
 
         check("clone() ugyanazt az eredmenyt adja", cloned->evaluate(env), original.evaluate(env));
+    }
+
+    // Lexer: ideiglenes stringbol is biztonsagosan dolgozik (korabban logo referencia)
+    {
+        Lexer lexer(std::string("x+1"));
+        checkStr("Lexer ideiglenes stringgel", std::to_string(lexer.tokenize().size()), "3");
+    }
+
+    // Lexer: fuggvenynev utan kozvetlenul irt valtozo
+    checkStr("Lexer sinx", lex("sinx"), "F(sin) V(x)");
+    checkStr("Lexer sinhx (leghosszabb egyezes)", lex("sinhx"), "F(sinh) V(x)");
+    checkStr("Lexer xsin(y)", lex("xsin(y)"), "V(x) F(sin) L(() V(y) R())");
+    checkStr("Lexer 2xy", lex("2xy"), "N(2) V(x) V(y)");
+
+    // Lexer: szamok
+    checkStr("Lexer .5", lex(".5"), "N(.5)");
+    checkStr("Lexer 1.2.3 hiba", lex("1.2.3"), "HIBA");
+    checkStr("Lexer nem ASCII karakter hiba", lex("2*\xCF\x80"), "HIBA");
+
+    // Konstans reszfa derivaltja 0, nem NaN
+    {
+        Environment envY;
+        envY["x"] = 2.0;
+        envY["y"] = 0.0;
+
+        FuncNode sqrtY(FunctionType::SQRT, std::make_unique<VarNode>("y"));
+        check("d/dx sqrt(y), y=0", sqrtY.differentiate("x")->evaluate(envY), 0.0);
+
+        FuncNode lnY(FunctionType::LN, std::make_unique<VarNode>("y"));
+        check("d/dx ln(y), y=0", lnY.differentiate("x")->evaluate(envY), 0.0);
+
+        BinaryOpNode zeroPowY(BinaryOperator::POW,
+            std::make_unique<NumberNode>(0.0), std::make_unique<VarNode>("y"));
+        check("d/dx 0^y", zeroPowY.differentiate("x")->evaluate(envY), 0.0);
+
+        // x * sqrt(y) -> sqrt(y) = 0
+        BinaryOpNode xTimesSqrtY(BinaryOperator::MUL,
+            std::make_unique<VarNode>("x"),
+            std::make_unique<FuncNode>(FunctionType::SQRT, std::make_unique<VarNode>("y")));
+        check("d/dx x*sqrt(y), y=0", xTimesSqrtY.differentiate("x")->evaluate(envY), 0.0);
+    }
+
+    // arccot ertekkeszlete (0, pi)
+    {
+        FuncNode acotNeg(FunctionType::ARCCOT, std::make_unique<NumberNode>(-1.0));
+        check("arccot(-1) = 3pi/4", acotNeg.evaluate(env), 3.0 * std::atan(1.0));
+
+        FuncNode acotZero(FunctionType::ARCCOT, std::make_unique<NumberNode>(0.0));
+        check("arccot(0) = pi/2", acotZero.evaluate(env), 2.0 * std::atan(1.0));
     }
 
     std::cout << "\n" << passed << "/" << total << " teszt sikeres.\n";
