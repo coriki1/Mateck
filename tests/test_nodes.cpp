@@ -1,181 +1,117 @@
-#include "test.h"
-#include "node.h"
+#include <gtest/gtest.h>
+
+#include "helpers.h"
 #include "errors.h"
 
 #include <cmath>
 
-void runNodeTests() {
+namespace {
+    const Environment X3 = {{"x", 3.0}};
+}
 
-    Environment env;
-    env["x"] = 3.0;
+/// EVALUATE / DIFFERENTIATE ///
 
-    // NumberNode alap
-    {
-        NumberNode n(5.0);
-        check("NumberNode evaluate", n.evaluate(env), 5.0);
-        checkBool("NumberNode isConstant", n.isConstant("x"), true);
-        auto d = n.differentiate("x");
-        check("NumberNode differentiate", d->evaluate(env), 0.0);
-    }
+TEST(NumberNode, Basics) {
+    NumberNode n(5.0);
+    EXPECT_NEAR(n.evaluate(X3), 5.0, EPS);
+    EXPECT_TRUE(n.isConstant("x"));
+    EXPECT_NEAR(n.differentiate("x")->evaluate(X3), 0.0, EPS);
+}
 
-    // VarNode alap
-    {
-        VarNode v("x");
-        check("VarNode evaluate", v.evaluate(env), 3.0);
-        checkBool("VarNode isConstant sajat valtozora", v.isConstant("x"), false);
-        checkBool("VarNode isConstant mas valtozora", v.isConstant("y"), true);
-        auto d = v.differentiate("x");
-        check("VarNode differentiate sajat valtozo szerint", d->evaluate(env), 1.0);
-    }
+TEST(VarNode, Basics) {
+    VarNode v("x");
+    EXPECT_NEAR(v.evaluate(X3), 3.0, EPS);
+    EXPECT_FALSE(v.isConstant("x"));
+    EXPECT_TRUE(v.isConstant("y"));
+    EXPECT_NEAR(v.differentiate("x")->evaluate(X3), 1.0, EPS);
+}
 
-    // BinaryOpNode: (x + 2) * (x - 1), x = 3 -> (5)*(2) = 10
-    {
-        auto left = std::make_unique<BinaryOpNode>(
-            BinaryOperator::ADD, std::make_unique<VarNode>("x"), std::make_unique<NumberNode>(2.0));
-        auto right = std::make_unique<BinaryOpNode>(
-            BinaryOperator::SUB, std::make_unique<VarNode>("x"), std::make_unique<NumberNode>(1.0));
-        BinaryOpNode expr(BinaryOperator::MUL, std::move(left), std::move(right));
+// (x + 2) * (x - 1), x = 3 -> 5 * 2 = 10
+TEST(BinaryOpNode, Evaluate) {
+    auto expr = bin(B::MUL, bin(B::ADD, x(), num(2)), bin(B::SUB, x(), num(1)));
+    EXPECT_NEAR(expr->evaluate(X3), 10.0, EPS);
+}
 
-        check("(x+2)*(x-1) evaluate x=3", expr.evaluate(env), 10.0);
-    }
+// x^2 -> 2x = 10 at x = 5
+TEST(Differentiate, PowerRule) {
+    auto square = bin(B::POW, x(), num(2));
+    EXPECT_NEAR(square->differentiate("x")->evaluate({{"x", 5.0}}), 10.0, EPS);
+}
 
-    // Hatvanyszabaly: x^2 differentialva, x=5 -> 2x = 10
-    {
-        BinaryOpNode square(BinaryOperator::POW,
-            std::make_unique<VarNode>("x"), std::make_unique<NumberNode>(2.0));
+// x * x -> 2x = 10 at x = 5
+TEST(Differentiate, ProductRule) {
+    auto product = bin(B::MUL, x(), x());
+    EXPECT_NEAR(product->differentiate("x")->evaluate({{"x", 5.0}}), 10.0, EPS);
+}
 
-        Environment env5;
-        env5["x"] = 5.0;
+// x / (x + 1) -> 1 / (x + 1)^2 = 1/9 at x = 2
+TEST(Differentiate, QuotientRule) {
+    auto quotient = bin(B::DIV, x(), bin(B::ADD, x(), num(1)));
+    EXPECT_NEAR(quotient->differentiate("x")->evaluate({{"x", 2.0}}), 1.0 / 9.0, EPS);
+}
 
-        auto derivative = square.differentiate("x");
-        check("x^2 derivalt evaluate x=5", derivative->evaluate(env5), 10.0);
-    }
+// used to be NaN: 0 * inf
+TEST(Differentiate, ConstantSubtreeGivesZeroNotNaN) {
+    const Environment env = {{"x", 2.0}, {"y", 0.0}};
 
-    // Szorzatszabaly: x * x differentialva, x=5 -> 2x = 10
-    {
-        BinaryOpNode product(BinaryOperator::MUL,
-            std::make_unique<VarNode>("x"), std::make_unique<VarNode>("x"));
+    EXPECT_NEAR(func(FunctionType::SQRT, y())->differentiate("x")->evaluate(env), 0.0, EPS);
+    EXPECT_NEAR(func(FunctionType::LN, y())->differentiate("x")->evaluate(env), 0.0, EPS);
+    EXPECT_NEAR(bin(B::POW, num(0), y())->differentiate("x")->evaluate(env), 0.0, EPS);
 
-        Environment env5;
-        env5["x"] = 5.0;
+    // x * sqrt(y) -> sqrt(y) = 0
+    auto xTimesSqrtY = bin(B::MUL, x(), func(FunctionType::SQRT, y()));
+    EXPECT_NEAR(xTimesSqrtY->differentiate("x")->evaluate(env), 0.0, EPS);
+}
 
-        auto derivative = product.differentiate("x");
-        check("x*x derivalt evaluate x=5 (szorzatszabaly)", derivative->evaluate(env5), 10.0);
-    }
+TEST(Clone, EvaluatesLikeOriginal) {
+    auto original = bin(B::ADD, x(), num(1));
+    EXPECT_NEAR(original->clone()->evaluate(X3), original->evaluate(X3), EPS);
+}
 
-    // Hanyadosszabaly: x / (x+1) differentialva, x=2 -> 1/(x+1)^2 = 1/9
-    {
-        auto num = std::make_unique<VarNode>("x");
-        auto denom = std::make_unique<BinaryOpNode>(
-            BinaryOperator::ADD, std::make_unique<VarNode>("x"), std::make_unique<NumberNode>(1.0));
-        BinaryOpNode quotient(BinaryOperator::DIV, std::move(num), std::move(denom));
+// range (0, pi)
+TEST(FuncNode, ArccotRange) {
+    EXPECT_NEAR(func(FunctionType::ARCCOT, num(-1))->evaluate({}), 3.0 * std::atan(1.0), EPS);
+    EXPECT_NEAR(func(FunctionType::ARCCOT, num(0))->evaluate({}), 2.0 * std::atan(1.0), EPS);
+}
 
-        Environment env2;
-        env2["x"] = 2.0;
+/// TOSTRING ///
 
-        auto derivative = quotient.differentiate("x");
-        check("x/(x+1) derivalt evaluate x=2 (hanyadosszabaly)", derivative->evaluate(env2), 1.0 / 9.0);
-    }
+TEST(ToString, ParenthesesFollowPrecedence) {
+    EXPECT_EQ(bin(B::MUL, bin(B::ADD, x(), num(2)), bin(B::SUB, x(), num(1)))->toString(), "(x + 2) * (x - 1)");
+    EXPECT_EQ(bin(B::SUB, x(), bin(B::SUB, x(), num(1)))->toString(), "x - (x - 1)");
+    EXPECT_EQ(bin(B::POW, bin(B::POW, x(), num(2)), num(3))->toString(), "(x^2)^3");
+    EXPECT_EQ(bin(B::POW, num(-1), num(2))->toString(), "(-1)^2");
+    EXPECT_EQ(neg(bin(B::POW, x(), num(2)))->toString(), "-x^2");
+    EXPECT_EQ(func(FunctionType::SIN, bin(B::ADD, x(), num(1)))->toString(), "sin(x + 1)");
+}
 
-    // clone teszt: klonozott fa ugyanazt adja vissza, mint az eredeti
-    {
-        BinaryOpNode original(BinaryOperator::ADD,
-            std::make_unique<VarNode>("x"), std::make_unique<NumberNode>(1.0));
-        auto cloned = original.clone();
+/// EQUALS ///
 
-        check("clone() ugyanazt az eredmenyt adja", cloned->evaluate(env), original.evaluate(env));
-    }
-    // Konstans reszfa derivaltja 0, nem NaN
-    {
-        Environment envY;
-        envY["x"] = 2.0;
-        envY["y"] = 0.0;
+TEST(Equals, IsStructural) {
+    EXPECT_TRUE(*bin(B::ADD, x(), num(1)) == *bin(B::ADD, x(), num(1)));
+    EXPECT_TRUE(*bin(B::ADD, x(), num(1)) != *bin(B::ADD, num(1), x()));   // same value, different shape
+    EXPECT_FALSE(*bin(B::ADD, x(), num(1)) == *bin(B::SUB, x(), num(1)));
+    EXPECT_FALSE(VarNode("x") == VarNode("y"));
+    EXPECT_TRUE(NumberNode(2) == NumberNode(2));
+    EXPECT_FALSE(*func(FunctionType::SIN, x()) == *func(FunctionType::COS, x()));
+    EXPECT_FALSE(NumberNode(2) == VarNode("x"));
+}
 
-        FuncNode sqrtY(FunctionType::SQRT, std::make_unique<VarNode>("y"));
-        check("d/dx sqrt(y), y=0", sqrtY.differentiate("x")->evaluate(envY), 0.0);
+/// ERRORS ///
 
-        FuncNode lnY(FunctionType::LN, std::make_unique<VarNode>("y"));
-        check("d/dx ln(y), y=0", lnY.differentiate("x")->evaluate(envY), 0.0);
+TEST(Errors, UndefinedVariableThrowsEvalError) {
+    EXPECT_THROW(VarNode("z").evaluate({}), EvalError);
+}
 
-        BinaryOpNode zeroPowY(BinaryOperator::POW,
-            std::make_unique<NumberNode>(0.0), std::make_unique<VarNode>("y"));
-        check("d/dx 0^y", zeroPowY.differentiate("x")->evaluate(envY), 0.0);
+TEST(Errors, DifferentiatingFloorThrowsDiffError) {
+    EXPECT_THROW(func(FunctionType::FLOOR, x())->differentiate("x"), DiffError);
+}
 
-        // x * sqrt(y) -> sqrt(y) = 0
-        BinaryOpNode xTimesSqrtY(BinaryOperator::MUL,
-            std::make_unique<VarNode>("x"),
-            std::make_unique<FuncNode>(FunctionType::SQRT, std::make_unique<VarNode>("y")));
-        check("d/dx x*sqrt(y), y=0", xTimesSqrtY.differentiate("x")->evaluate(envY), 0.0);
-    }
+/// NAME LOOKUPS ///
 
-    // arccot ertekkeszlete (0, pi)
-    {
-        FuncNode acotNeg(FunctionType::ARCCOT, std::make_unique<NumberNode>(-1.0));
-        check("arccot(-1) = 3pi/4", acotNeg.evaluate(env), 3.0 * std::atan(1.0));
-
-        FuncNode acotZero(FunctionType::ARCCOT, std::make_unique<NumberNode>(0.0));
-        check("arccot(0) = pi/2", acotZero.evaluate(env), 2.0 * std::atan(1.0));
-    }
-
-    // toString: zarojelezes a precedencia szerint
-    {
-        auto x = [] { return std::make_unique<VarNode>("x"); };
-        auto num = [](double v) { return std::make_unique<NumberNode>(v); };
-
-        BinaryOpNode sum(BinaryOperator::MUL,
-            std::make_unique<BinaryOpNode>(BinaryOperator::ADD, x(), num(2)),
-            std::make_unique<BinaryOpNode>(BinaryOperator::SUB, x(), num(1)));
-        checkStr("toString (x+2)*(x-1)", sum.toString(), "(x + 2) * (x - 1)");
-
-        BinaryOpNode subRight(BinaryOperator::SUB, x(),
-            std::make_unique<BinaryOpNode>(BinaryOperator::SUB, x(), num(1)));
-        checkStr("toString x-(x-1)", subRight.toString(), "x - (x - 1)");
-
-        BinaryOpNode powLeft(BinaryOperator::POW,
-            std::make_unique<BinaryOpNode>(BinaryOperator::POW, x(), num(2)), num(3));
-        checkStr("toString (x^2)^3", powLeft.toString(), "(x^2)^3");
-
-        BinaryOpNode powNeg(BinaryOperator::POW, num(-1), num(2));
-        checkStr("toString (-1)^2", powNeg.toString(), "(-1)^2");
-
-        UnaryOpNode negPow(UnaryOperator::SUB,
-            std::make_unique<BinaryOpNode>(BinaryOperator::POW, x(), num(2)));
-        checkStr("toString -x^2", negPow.toString(), "-x^2");
-
-        FuncNode sinSum(FunctionType::SIN,
-            std::make_unique<BinaryOpNode>(BinaryOperator::ADD, x(), num(1)));
-        checkStr("toString sin(x + 1)", sinSum.toString(), "sin(x + 1)");
-    }
-    // equals / operator==: szerkezeti egyenloseg
-    {
-        auto x = [] { return std::make_unique<VarNode>("x"); };
-        auto num = [](double v) { return std::make_unique<NumberNode>(v); };
-        auto bin = [](BinaryOperator op, std::unique_ptr<Node> l, std::unique_ptr<Node> r) {
-            return std::make_unique<BinaryOpNode>(op, std::move(l), std::move(r));
-        };
-
-        checkBool("x + 1 == x + 1", *bin(BinaryOperator::ADD, x(), num(1)) == *bin(BinaryOperator::ADD, x(), num(1)), true);
-        checkBool("x + 1 != 1 + x (szerkezetileg)", *bin(BinaryOperator::ADD, x(), num(1)) != *bin(BinaryOperator::ADD, num(1), x()), true);
-        checkBool("x + 1 != x - 1", *bin(BinaryOperator::ADD, x(), num(1)) == *bin(BinaryOperator::SUB, x(), num(1)), false);
-        checkBool("x != y", VarNode("x") == VarNode("y"), false);
-        checkBool("2 == 2", NumberNode(2) == NumberNode(2), true);
-        checkBool("sin(x) != cos(x)", FuncNode(FunctionType::SIN, x()) == FuncNode(FunctionType::COS, x()), false);
-        checkBool("2 != x", NumberNode(2) == VarNode("x"), false);
-    }
-
-    // Hibatipusok
-    {
-        Environment empty;
-        checkBool("ismeretlen valtozo -> EvalError",
-            throwsError<EvalError>([&] { VarNode("z").evaluate(empty); }), true);
-
-        checkBool("floor derivalasa -> DiffError",
-            throwsError<DiffError>([] { FuncNode(FunctionType::FLOOR, std::make_unique<VarNode>("x")).differentiate("x"); }), true);
-    }
-
-    // Fuggvenynevek oda-vissza
-    checkStr("functionTypeToString(ARCSIN)", functionTypeToString(FunctionType::ARCSIN), "arcsin");
-    checkBool("stringToFunctionType(\"acoth\")", stringToFunctionType("acoth") == FunctionType::ACOTH, true);
-    checkBool("stringToFunctionType(\"foo\") ures", stringToFunctionType("foo").has_value(), false);
-    check("constantValue(\"pi\")", *constantValue("pi"), std::acos(-1.0));
+TEST(Names, FunctionsAndConstants) {
+    EXPECT_EQ(functionTypeToString(FunctionType::ARCSIN), "arcsin");
+    EXPECT_TRUE(stringToFunctionType("acoth") == FunctionType::ACOTH);
+    EXPECT_FALSE(stringToFunctionType("foo").has_value());
+    EXPECT_NEAR(*constantValue("pi"), std::acos(-1.0), EPS);
 }

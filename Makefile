@@ -8,8 +8,11 @@ LIB_SRC = src/types.cpp src/token.cpp src/lexer.cpp \
           src/node_binaryop.cpp src/node_unaryop.cpp src/node_func.cpp \
           src/simplify.cpp
 
-# Tesztek
-TEST_SRC = tests/test_main.cpp tests/test_lexer.cpp tests/test_nodes.cpp tests/test_simplify.cpp
+# Tesztek (GoogleTest, telepítés: sudo dnf install gtest-devel)
+TEST_SRC = tests/test_lexer.cpp tests/test_nodes.cpp tests/test_simplify.cpp
+
+GTEST_CFLAGS = $(shell pkg-config --cflags gtest_main)
+GTEST_LIBS   = $(shell pkg-config --libs gtest_main)
 
 # Objektumok
 LIB_OBJ  = $(LIB_SRC:.cpp=.o)
@@ -29,7 +32,7 @@ $(TARGET): $(LIB_OBJ) $(MAIN_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 $(TEST_TARGET): $(LIB_OBJ) $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(GTEST_LIBS)
 
 # Tesztek fordítása és futtatása
 test: $(TEST_TARGET)
@@ -38,6 +41,9 @@ test: $(TEST_TARGET)
 # Fordítás .cpp -> .o
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+tests/%.o: tests/%.cpp
+	$(CXX) $(CXXFLAGS) $(GTEST_CFLAGS) -c $< -o $@
 
 # Tisztítás
 clean:

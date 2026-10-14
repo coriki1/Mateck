@@ -1,27 +1,23 @@
-#include "test.h"
+#include <gtest/gtest.h>
+
 #include "lexer.h"
 #include "errors.h"
 
 namespace {
 
-    // tokenek tomor szoveges alakja, pl. "F(sin) V(x)"; az END tokent kihagyja
+    // compact form of the tokens, e.g. "F(sin) V(x)"; the END token is left out
     std::string lex(const std::string& input) {
         std::string result;
-        try {
-            Lexer lexer(input);
-            for (const Token& t : lexer.tokenize()) {
-                if (t.getType() == TokenType::END) continue;
-                if (!result.empty()) result += " ";
-                result += tokenTypeToString(t.getType()).substr(0, 1) + "(" + t.getValue() + ")";
-            }
-        }
-        catch (const LexError&) {
-            return "HIBA";
+        Lexer lexer(input);
+        for (const Token& t : lexer.tokenize()) {
+            if (t.getType() == TokenType::END) continue;
+            if (!result.empty()) result += " ";
+            result += tokenTypeToString(t.getType()).substr(0, 1) + "(" + t.getValue() + ")";
         }
         return result;
     }
 
-    // tokenek pozicioi, pl. "0 4 6"
+    // token positions, e.g. "0 4 6"
     std::string positions(const std::string& input) {
         std::string result;
         Lexer lexer(input);
@@ -34,72 +30,72 @@ namespace {
 
 }
 
-void runLexerTests() {
+// used to keep a dangling reference to the input
+TEST(Lexer, OwnsTemporaryInput) {
+    Lexer lexer(std::string("x+1"));
+    EXPECT_EQ(lexer.tokenize().size(), 4u); // x + 1 END
+}
 
-    // Lexer: ideiglenes stringbol is biztonsagosan dolgozik (korabban logo referencia)
-    {
-        Lexer lexer(std::string("x+1"));
-        checkStr("Lexer ideiglenes stringgel", std::to_string(lexer.tokenize().size()), "4"); // x + 1 END
+TEST(Lexer, SplitsFunctionFromFollowingVariable) {
+    EXPECT_EQ(lex("sinx"), "F(sin) V(x)");
+    EXPECT_EQ(lex("sinhx"), "F(sinh) V(x)");    // longest match wins
+    EXPECT_EQ(lex("xsin(y)"), "V(x) F(sin) L(() V(y) R())");
+    EXPECT_EQ(lex("2xy"), "N(2) V(x) V(y)");
+}
+
+TEST(Lexer, Numbers) {
+    EXPECT_EQ(lex(".5"), "N(.5)");
+    EXPECT_THROW(lex("1.2.3"), LexError);
+    EXPECT_THROW(lex("2*\xCF\x80"), LexError);  // non-ASCII character
+}
+
+TEST(Lexer, Constants) {
+    EXPECT_EQ(lex("pi"), "C(pi)");
+    EXPECT_EQ(lex("e"), "C(e)");
+    EXPECT_EQ(lex("2pi"), "N(2) C(pi)");
+    EXPECT_EQ(lex("pix"), "C(pi) V(x)");        // longest match wins
+    EXPECT_EQ(lex("ex"), "C(e) V(x)");
+    EXPECT_EQ(lex("1e5"), "N(1) C(e) N(5)");    // no scientific notation
+    EXPECT_EQ(lex("sec"), "V(s) C(e) V(c)");    // sec is not a function
+}
+
+TEST(Lexer, EndsWithEndToken) {
+    Lexer lexer("x + 1");
+    EXPECT_EQ(lexer.tokenize().back().getType(), TokenType::END);
+
+    Lexer empty("");
+    auto tokens = empty.tokenize();
+    ASSERT_EQ(tokens.size(), 1u);
+    EXPECT_EQ(tokens[0].getType(), TokenType::END);
+}
+
+// END is positioned at the length of the input
+TEST(Lexer, Positions) {
+    EXPECT_EQ(positions("sin x + 12"), "0 4 6 8 10");
+    EXPECT_EQ(positions("(.5)"), "0 1 3 4");
+}
+
+TEST(Lexer, UnsupportedCharacterErrorHasPosition) {
+    try {
+        Lexer("x + $").tokenize();
+        FAIL() << "expected LexError";
     }
-
-    // Lexer: fuggvenynev utan kozvetlenul irt valtozo
-    checkStr("Lexer sinx", lex("sinx"), "F(sin) V(x)");
-    checkStr("Lexer sinhx (leghosszabb egyezes)", lex("sinhx"), "F(sinh) V(x)");
-    checkStr("Lexer xsin(y)", lex("xsin(y)"), "V(x) F(sin) L(() V(y) R())");
-    checkStr("Lexer 2xy", lex("2xy"), "N(2) V(x) V(y)");
-
-    // Lexer: szamok
-    checkStr("Lexer .5", lex(".5"), "N(.5)");
-    checkStr("Lexer 1.2.3 hiba", lex("1.2.3"), "HIBA");
-    checkStr("Lexer nem ASCII karakter hiba", lex("2*\xCF\x80"), "HIBA");
-
-    // Konstansok
-    checkStr("Lexer pi", lex("pi"), "C(pi)");
-    checkStr("Lexer e", lex("e"), "C(e)");
-    checkStr("Lexer 2pi", lex("2pi"), "N(2) C(pi)");
-    checkStr("Lexer pix (leghosszabb egyezes)", lex("pix"), "C(pi) V(x)");
-    checkStr("Lexer ex", lex("ex"), "C(e) V(x)");
-    checkStr("Lexer 1e5 nem tudomanyos jeloles", lex("1e5"), "N(1) C(e) N(5)");
-    checkStr("Lexer sec (nem fuggveny)", lex("sec"), "V(s) C(e) V(c)");
-
-    // END token
-    {
-        Lexer lexer("x + 1");
-        auto tokens = lexer.tokenize();
-        checkBool("Lexer utolso token END", tokens.back().getType() == TokenType::END, true);
-
-        Lexer empty("");
-        auto emptyTokens = empty.tokenize();
-        checkBool("Lexer ures bemenet -> csak END",
-            emptyTokens.size() == 1 && emptyTokens[0].getType() == TokenType::END, true);
+    catch (const LexError& e) {
+        EXPECT_EQ(e.getPosition(), 4u);
+        EXPECT_STREQ(e.what(), "Unsupported character '$' at column 5");
     }
+}
 
-    // Pozíciok (az END a bemenet hossza)
-    checkStr("Lexer poziciok 'sin x + 12'", positions("sin x + 12"), "0 4 6 8 10");
-    checkStr("Lexer poziciok '(.5)'", positions("(.5)"), "0 1 3 4");
-
-    // Hibak pozicioval
-    {
-        try {
-            Lexer lexer("x + $");
-            lexer.tokenize();
-            checkBool("Lexer '$' hibat dob", false, true);
-        }
-        catch (const LexError& e) {
-            check("LexError pozicio", e.getPosition(), 4);
-            checkStr("LexError uzenet", e.what(), "Unsupported character '$' at column 5");
-        }
-
-        try {
-            Lexer lexer("2 * 1.2.3");
-            lexer.tokenize();
-            checkBool("Lexer 1.2.3 hibat dob", false, true);
-        }
-        catch (const LexError& e) {
-            check("LexError pozicio rossz szamnal", e.getPosition(), 4);
-        }
-
-        checkBool("LexError egyben MateckError",
-            throwsError<MateckError>([] { Lexer("#").tokenize(); }), true);
+TEST(Lexer, MalformedNumberErrorPointsToNumberStart) {
+    try {
+        Lexer("2 * 1.2.3").tokenize();
+        FAIL() << "expected LexError";
     }
+    catch (const LexError& e) {
+        EXPECT_EQ(e.getPosition(), 4u);
+    }
+}
+
+TEST(Lexer, LexErrorIsMateckError) {
+    EXPECT_THROW(Lexer("#").tokenize(), MateckError);
 }
