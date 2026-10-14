@@ -4,7 +4,6 @@
 #include "types.h"
 #include <iostream>
 #include <vector>
-#include <unordered_set>
 
 class Lexer {
     std::string input;

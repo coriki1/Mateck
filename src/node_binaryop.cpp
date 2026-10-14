@@ -19,7 +19,7 @@ double BinaryOpNode::evaluate(const Environment& env) const {
         case BinaryOperator::POW: return std::pow(l, r);
     }
     
-    throw std::runtime_error("Unknown binary operator");
+    throw std::logic_error("Unknown binary operator");
 
 }
 
@@ -37,7 +37,7 @@ std::unique_ptr<Node> BinaryOpNode::differentiate(const std::string& var) const 
         case BinaryOperator::POW: return differentiatePower(var);
     }
 
-    throw std::runtime_error("Unknown binary operator");
+    throw std::logic_error("Unknown binary operator");
 }
 
 std::unique_ptr<Node> BinaryOpNode::differentiateLinear(const std::string& var) const {
@@ -245,7 +245,7 @@ int BinaryOpNode::precedence() const {
         case BinaryOperator::DIV: return Precedence::MULTIPLICATIVE;
         case BinaryOperator::POW: return Precedence::POWER;
     }
-    throw std::runtime_error("Unknown binary operator");
+    throw std::logic_error("Unknown binary operator");
 }
 
 bool BinaryOpNode::equals(const Node& other) const {

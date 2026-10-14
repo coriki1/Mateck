@@ -14,7 +14,7 @@ double UnaryOpNode::evaluate(const Environment& env) const {
         case UnaryOperator::SUB: return -val;
     }
     
-    throw std::runtime_error("Unknown unary operator");
+    throw std::logic_error("Unknown unary operator");
 }
 
 std::unique_ptr<Node> UnaryOpNode::differentiate(const std::string& var) const {

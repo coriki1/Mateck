@@ -1,16 +1,7 @@
 #include "lexer.h"
 #include "types.h"
+#include "errors.h"
 #include <cctype>
-#include <stdexcept>
-
-static const std::unordered_set<std::string> FUNCTIONS = {
-    "sin", "cos", "tan", "cot",
-    "arcsin", "arccos", "arctan", "arccot",
-    "sinh", "cosh", "tanh", "coth",
-    "asinh", "acosh", "atanh", "acoth",
-    "ln", "log", "sqrt", "abs",
-    "floor", "ceil", "round"
-};
 
 // <cctype> functions are UB for negative chars (e.g. UTF-8 bytes), so cast to unsigned char first
 static bool isDigit(char c) { return std::isdigit(static_cast<unsigned char>(c)); }
@@ -30,26 +21,27 @@ std::vector<Token> Lexer::tokenize() { /// state machine thingy ///
             Tokens.push_back(readIdentifier());
         }
         else if (isOperator(current)) {
-            Tokens.push_back(Token(TokenType::OPERATOR, std::string(1, current)));
+            Tokens.push_back(Token(TokenType::OPERATOR, std::string(1, current), pos));
             advance();
         }
         else if (current == '(') {
-            Tokens.push_back(Token(TokenType::LPAREN, "("));
+            Tokens.push_back(Token(TokenType::LPAREN, "(", pos));
             advance();
         }
         else if (current == ')') {
-            Tokens.push_back(Token(TokenType::RPAREN, ")"));
+            Tokens.push_back(Token(TokenType::RPAREN, ")", pos));
             advance();
         }
         else if (isSpace(current)) {
             skipWhitespace();
         }
         else {
-            throw std::runtime_error("Unsupported character: " + std::string(1, current));
+            throw LexError("Unsupported character '" + std::string(1, current) + "'", pos);
         }
 
     }
 
+    Tokens.push_back(Token(TokenType::END, "", input.size()));
     return Tokens;
 
 }
@@ -83,6 +75,7 @@ void Lexer::skipWhitespace() {
 
 Token Lexer::readNumber() {
 
+    size_t start = pos;
     std::string value = "";
     bool decimalPointFound = false;
     
@@ -98,10 +91,10 @@ Token Lexer::readNumber() {
     }
 
     if (current == '.') { // second decimal point, e.g. "1.2.3"
-        throw std::runtime_error("Malformed number: " + value + ".");
+        throw LexError("Malformed number '" + value + ".'", start);
     }
 
-    return Token(TokenType::NUMBER, value);
+    return Token(TokenType::NUMBER, value, start);
 }
 
 Token Lexer::readIdentifier() { // character chains are broken into individual variables, e.g. "xy" -> x, y
@@ -112,18 +105,29 @@ Token Lexer::readIdentifier() { // character chains are broken into individual v
         end++;
     }
 
-    // longest function name at the start of the chain wins, e.g. "sinhx" -> sinh, x
-    for (size_t len = end - start; len > 1; len--) {
+    // longest function or constant name at the start of the chain wins,
+    // e.g. "sinhx" -> sinh, x and "pix" -> pi, x
+    for (size_t len = end - start; len >= 1; len--) {
 
         std::string candidate = input.substr(start, len);
-        if (FUNCTIONS.count(candidate)) {
-            for (size_t i = 0; i < len; i++) {
-                advance();
-            }
-            return Token(TokenType::FUNCTION, candidate);
+
+        TokenType type;
+        if (stringToFunctionType(candidate)) {
+            type = TokenType::FUNCTION;
         }
+        else if (constantValue(candidate)) {
+            type = TokenType::CONSTANT;
+        }
+        else {
+            continue;
+        }
+
+        for (size_t i = 0; i < len; i++) {
+            advance();
+        }
+        return Token(type, candidate, start);
     }
 
     advance();
-    return Token(TokenType::VARIABLE, std::string(1, input[start]));
+    return Token(TokenType::VARIABLE, std::string(1, input[start]), start);
 }

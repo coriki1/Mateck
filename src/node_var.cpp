@@ -1,13 +1,14 @@
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
+#include "errors.h"
 
 /// VARNODE DEFINITIONS /////////////////////////////////////////////////////////////////
 
 double VarNode::evaluate(const Environment& env) const {
     auto it = env.find(name);
     if (it == env.end()) {
-        throw std::runtime_error("Undefined variable: " + name);
+        throw EvalError("Undefined variable: " + name);
     }
     return it->second;
 }

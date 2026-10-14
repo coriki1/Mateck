@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -9,8 +10,10 @@ enum class TokenType {
     OPERATOR,
     VARIABLE,
     FUNCTION,
+    CONSTANT,   /// pi, e
     LPAREN,
-    RPAREN
+    RPAREN,
+    END         /// always the last token, so the parser never runs off the list
 };
 
 enum class BinaryOperator {
@@ -47,4 +50,10 @@ enum class FunctionType {
 };
 
 std::string tokenTypeToString(TokenType t);
+
+/// NAME LOOKUPS (one table in types.cpp, used by the lexer, parser and toString) ///
+
 std::string functionTypeToString(FunctionType f);
+std::optional<FunctionType> stringToFunctionType(const std::string& name);
+
+std::optional<double> constantValue(const std::string& name);

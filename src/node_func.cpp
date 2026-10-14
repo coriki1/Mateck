@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
+#include "errors.h"
 
 namespace {
 
@@ -53,7 +54,7 @@ double FuncNode::evaluate(const Environment& env) const {
         case FunctionType::ROUND : return std::round(val);
    
     }
-    throw std::runtime_error("Unknown function type");
+    throw std::logic_error("Unknown function type");
 }
 
 
@@ -97,10 +98,10 @@ std::unique_ptr<Node> FuncNode::differentiate(const std::string& var) const {
         case FunctionType::FLOOR:
         case FunctionType::CEIL:
         case FunctionType::ROUND:
-            throw std::runtime_error("Cannot differentiate a discontinuous function (floor/ceil/round)");
+            throw DiffError("Cannot differentiate a discontinuous function (floor/ceil/round)");
 
         default:
-            throw std::runtime_error("FuncNode::differentiate: function not implemented yet");
+            throw std::logic_error("FuncNode::differentiate: function not implemented yet");
     }
 }
 
