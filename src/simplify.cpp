@@ -28,9 +28,10 @@ namespace {
         std::unique_ptr<Node> key;
     };
 
-    // t1 + t2 + ... + constant
+    // t1 + t2 + ... + constantNumerator / constantDenominator
     struct FlatSum {
-        double constant = 0.0;
+        double constantNumerator = 0.0;
+        double constantDenominator = 1.0;
         std::vector<Term> terms;
     };
 
@@ -64,6 +65,22 @@ namespace {
             numerator = -numerator;
             denominator = -denominator;
         }
+    }
+
+    // a/b + c/d = (ad + cb) / bd
+    void addFraction(double& numerator, double& denominator, double addNumerator, double addDenominator) {
+        numerator = numerator * addDenominator + addNumerator * denominator;
+        denominator *= addDenominator;
+        reduceFraction(numerator, denominator);
+    }
+
+    // exact number: 3 or 1 / 2
+    std::unique_ptr<Node> buildFraction(double numerator, double denominator) {
+        if (denominator == 1.0) {
+            return std::make_unique<NumberNode>(numerator);
+        }
+        return std::make_unique<BinaryOpNode>(BinaryOperator::DIV,
+            std::make_unique<NumberNode>(numerator), std::make_unique<NumberNode>(denominator));
     }
 
     std::unique_ptr<Node> multiply(std::unique_ptr<Node> acc, std::unique_ptr<Node> factor) {
@@ -193,7 +210,7 @@ namespace {
     void flattenSum(const Node& node, double sign, FlatSum& out) {
 
         if (auto v = node.numericValue()) {
-            out.constant += sign * *v;
+            addFraction(out.constantNumerator, out.constantDenominator, sign * *v, 1.0);
             return;
         }
 
@@ -221,8 +238,8 @@ namespace {
 
         collectFactors(p);
 
-        if (p.factors.empty()) { // e.g. x / x
-            out.constant += sign * p.numerator / p.denominator;
+        if (p.factors.empty()) { // e.g. 1 / 2 or x / x
+            addFraction(out.constantNumerator, out.constantDenominator, sign * p.numerator, p.denominator);
             return;
         }
 
@@ -243,10 +260,8 @@ namespace {
             auto same = std::find_if(merged.begin(), merged.end(),
                 [&](const Term& m) { return *m.key == *term.key; });
 
-            if (same != merged.end()) { // a/b + c/d = (ad + cb) / bd
-                same->numerator = same->numerator * term.denominator + term.numerator * same->denominator;
-                same->denominator *= term.denominator;
-                reduceFraction(same->numerator, same->denominator);
+            if (same != merged.end()) {
+                addFraction(same->numerator, same->denominator, term.numerator, term.denominator);
             }
             else {
                 reduceFraction(term.numerator, term.denominator);
@@ -291,13 +306,13 @@ namespace {
         }
 
         if (!result) {
-            return std::make_unique<NumberNode>(s.constant);
+            return buildFraction(s.constantNumerator, s.constantDenominator);
         }
 
-        if (s.constant != 0.0) {
-            BinaryOperator op = s.constant < 0 ? BinaryOperator::SUB : BinaryOperator::ADD;
+        if (s.constantNumerator != 0.0) {
+            BinaryOperator op = s.constantNumerator < 0 ? BinaryOperator::SUB : BinaryOperator::ADD;
             result = std::make_unique<BinaryOpNode>(
-                op, std::move(result), std::make_unique<NumberNode>(std::abs(s.constant)));
+                op, std::move(result), buildFraction(std::abs(s.constantNumerator), s.constantDenominator));
         }
 
         return result;
@@ -330,8 +345,8 @@ std::unique_ptr<Node> simplifyProduct(const Node& product) {
     collectFactors(p);
     reduceFraction(p.numerator, p.denominator);
 
-    if (p.factors.empty()) {
-        return std::make_unique<NumberNode>(p.numerator / p.denominator);
+    if (p.factors.empty()) { // 6 / 4 -> 3 / 2
+        return buildFraction(p.numerator, p.denominator);
     }
 
     return buildProduct(p);

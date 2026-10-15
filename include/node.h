@@ -90,6 +90,32 @@ public:
 
 };
 
+/// CHILD CLASS : CONSTANTNODE ///////////////////////////////////////////////////////////
+// named constant like pi or e: evaluates to its value, but prints and simplifies symbolically
+
+class ConstantNode : public Node {
+    std::string name;
+    double value;
+public:
+
+    ConstantNode(std::string n, double v)
+        : name(std::move(n)), value(v) {}
+
+    /// GETTERS ///
+    const std::string& getName() const { return name; }
+
+    double evaluate(const Environment& env) const override;
+    std::unique_ptr<Node> differentiate(const std::string& var) const override;
+    std::unique_ptr<Node> clone() const override;
+    bool isConstant(const std::string& var) const override;
+    std::unique_ptr<Node> simplifyStep() const override;
+    std::string toString() const override;
+    bool equals(const Node& other) const override;
+    int precedence() const override;
+
+    // numericValue() is deliberately not overridden, so simplify() keeps 2 * pi instead of 6.28319
+};
+
 /// CHILD CLASS : BINARYOPNODE ///////////////////////////////////////////////////////////
 
 class BinaryOpNode : public Node {

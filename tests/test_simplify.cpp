@@ -79,6 +79,15 @@ TEST(Simplify, KeepsCoefficientsAsFractions) {
     EXPECT_EQ(simp(bin(B::DIV, bin(B::MUL, num(6), x()), num(4))), "3 * x / 2");
 }
 
+TEST(Simplify, KeepsNumberFractionsExact) {
+    EXPECT_EQ(simp(bin(B::DIV, num(1), num(2))), "1 / 2");
+    EXPECT_EQ(simp(bin(B::DIV, num(6), num(4))), "3 / 2");
+    EXPECT_EQ(simp(bin(B::DIV, num(6), num(3))), "2");
+    EXPECT_EQ(simp(bin(B::MUL, bin(B::DIV, num(1), num(2)), x())), "x / 2");
+    EXPECT_EQ(simp(bin(B::ADD, bin(B::DIV, num(1), num(2)), bin(B::DIV, num(1), num(3)))), "5 / 6");
+    EXPECT_EQ(simp(bin(B::SUB, x(), bin(B::DIV, num(1), num(2)))), "x - 1 / 2");
+}
+
 /// CANONICAL FORM ///
 
 TEST(Simplify, CanonicalOrderAndSigns) {

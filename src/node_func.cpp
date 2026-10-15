@@ -350,6 +350,11 @@ std::unique_ptr<Node> FuncNode::simplifyStep() const {
 
     std::unique_ptr<Node> a = arg->simplifyStep();
 
+    auto* constant = dynamic_cast<const ConstantNode*>(a.get());
+    if (func == FunctionType::LN && constant && constant->getName() == "e") { // ln(e) -> 1
+        return std::make_unique<NumberNode>(1.0);
+    }
+
     if (a->numericValue()) { // sin(0) -> 0, but ln(0) or sqrt(-1) stay as they are
         double v = FuncNode(func, a->clone()).evaluate(Environment{});
         if (std::isfinite(v)) {

@@ -186,7 +186,8 @@ std::unique_ptr<Node> BinaryOpNode::simplifyStep() const {
     std::optional<double> lv = l->numericValue();
     std::optional<double> rv = r->numericValue();
 
-    if (lv && rv) { // 2 * 3 -> 6, but 1 / 0 stays as it is
+    // 2 * 3 -> 6, but 1 / 0 stays as it is; division is left to simplifyProduct(), which keeps 1 / 2 exact
+    if (lv && rv && op != BinaryOperator::DIV) {
         double v = BinaryOpNode(op, l->clone(), r->clone()).evaluate(Environment{});
         if (std::isfinite(v)) {
             return std::make_unique<NumberNode>(v);
