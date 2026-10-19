@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "types.h"
 
@@ -27,6 +28,13 @@ public:
     virtual double evaluate(const Environment& env) const = 0;
     virtual std::unique_ptr<Node> differentiate(const std::string& var) const = 0;
     virtual std::unique_ptr<Node> clone() const = 0;
+
+    // copy of the tree with every occurrence of var replaced by a copy of value
+    virtual std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const = 0;
+
+    // appends the variables that are not in out yet, in order of first appearance
+    virtual void collectVariables(std::vector<std::string>& out) const = 0;
+
     virtual bool isConstant(const std::string& var) const = 0;
     virtual std::string toString() const = 0;
 
@@ -49,6 +57,13 @@ public:
 inline bool operator==(const Node& a, const Node& b) { return a.equals(b); }
 inline bool operator!=(const Node& a, const Node& b) { return !a.equals(b); }
 
+// variables of an expression in order of first appearance, e.g. y + x*y -> {y, x}
+inline std::vector<std::string> variables(const Node& node) {
+    std::vector<std::string> out;
+    node.collectVariables(out);
+    return out;
+}
+
 /// CHILD CLASS : NUMBERNODE ///////////////////////////////////////////////////////////
 
 class NumberNode : public Node {
@@ -61,6 +76,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;
@@ -81,6 +98,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;
@@ -107,6 +126,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;
@@ -136,6 +157,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;
@@ -175,6 +198,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;
@@ -195,6 +220,8 @@ public:
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
+    std::unique_ptr<Node> substitute(const std::string& var, const Node& value) const override;
+    void collectVariables(std::vector<std::string>& out) const override;
     bool isConstant(const std::string& var) const override;
     std::unique_ptr<Node> simplifyStep() const override;
     std::string toString() const override;

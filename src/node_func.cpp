@@ -377,3 +377,11 @@ bool FuncNode::equals(const Node& other) const {
     auto* o = dynamic_cast<const FuncNode*>(&other);
     return o && func == o->func && *arg == *o->arg;
 }
+
+std::unique_ptr<Node> FuncNode::substitute(const std::string& var, const Node& value) const {
+    return std::make_unique<FuncNode>(func, arg->substitute(var, value));
+}
+
+void FuncNode::collectVariables(std::vector<std::string>& out) const {
+    arg->collectVariables(out);
+}

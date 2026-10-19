@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
@@ -45,4 +46,17 @@ int VarNode::precedence() const {
 bool VarNode::equals(const Node& other) const {
     auto* o = dynamic_cast<const VarNode*>(&other);
     return o && name == o->name;
+}
+
+std::unique_ptr<Node> VarNode::substitute(const std::string& var, const Node& value) const {
+    if (name == var) {
+        return value.clone();
+    }
+    return clone();
+}
+
+void VarNode::collectVariables(std::vector<std::string>& out) const {
+    if (std::find(out.begin(), out.end(), name) == out.end()) {
+        out.push_back(name);
+    }
 }

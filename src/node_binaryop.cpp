@@ -253,3 +253,13 @@ bool BinaryOpNode::equals(const Node& other) const {
     auto* o = dynamic_cast<const BinaryOpNode*>(&other);
     return o && op == o->op && *left == *o->left && *right == *o->right;
 }
+
+std::unique_ptr<Node> BinaryOpNode::substitute(const std::string& var, const Node& value) const {
+    return std::make_unique<BinaryOpNode>(op, left->substitute(var, value), right->substitute(var, value));
+}
+
+// left before right, so the order matches the written expression
+void BinaryOpNode::collectVariables(std::vector<std::string>& out) const {
+    left->collectVariables(out);
+    right->collectVariables(out);
+}

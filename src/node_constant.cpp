@@ -34,3 +34,10 @@ bool ConstantNode::equals(const Node& other) const {
 int ConstantNode::precedence() const {
     return Precedence::ATOM;
 }
+
+std::unique_ptr<Node> ConstantNode::substitute(const std::string&, const Node&) const {
+    return clone();
+}
+
+void ConstantNode::collectVariables(std::vector<std::string>&) const {
+}

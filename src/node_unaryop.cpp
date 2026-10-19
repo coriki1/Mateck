@@ -71,3 +71,11 @@ bool UnaryOpNode::equals(const Node& other) const {
     auto* o = dynamic_cast<const UnaryOpNode*>(&other);
     return o && op == o->op && *arg == *o->arg;
 }
+
+std::unique_ptr<Node> UnaryOpNode::substitute(const std::string& var, const Node& value) const {
+    return std::make_unique<UnaryOpNode>(op, arg->substitute(var, value));
+}
+
+void UnaryOpNode::collectVariables(std::vector<std::string>& out) const {
+    arg->collectVariables(out);
+}

@@ -43,3 +43,10 @@ bool NumberNode::equals(const Node& other) const {
     std::optional<double> o = other.numericValue();
     return o && value == *o;
 }
+
+std::unique_ptr<Node> NumberNode::substitute(const std::string&, const Node&) const {
+    return clone();
+}
+
+void NumberNode::collectVariables(std::vector<std::string>&) const {
+}
