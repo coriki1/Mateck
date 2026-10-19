@@ -1,10 +1,10 @@
 #include "repl.h"
 #include "parser.h"
 #include "errors.h"
+#include "format.h"
 
 #include <cmath>
 #include <iomanip>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,9 +27,7 @@ namespace {
         if (std::abs(v) < ZERO_THRESHOLD) {
             return "0";
         }
-        std::ostringstream text;
-        text << v;
-        return text.str();
+        return formatNumber(v);
     }
 
     bool isBlank(const std::string& line) {
@@ -83,13 +81,13 @@ namespace {
             return true;
         }
 
-        printLine(out, "ertelmezes:", expr->toString());
-        printLine(out, "egyszerusitve:", expr->simplify()->toString());
+        printLine(out, "ertelmezes:", format(*expr));
+        printLine(out, "egyszerusitve:", format(*expr->simplify()));
 
         std::unique_ptr<Node> derivative; // stays empty for e.g. floor(x)
         try {
             derivative = expr->differentiate("x");
-            printLine(out, "d/dx:", derivative->simplify()->toString());
+            printLine(out, "d/dx:", format(*derivative->simplify()));
         }
         catch (const DiffError& e) {
             printLine(out, "d/dx:", e.what());
@@ -127,9 +125,9 @@ namespace {
             }
         }
         else { // some variables stay: show the substituted expression
-            printLine(out, "behelyettesitve:", expr->simplify()->toString());
+            printLine(out, "behelyettesitve:", format(*expr->simplify()));
             if (derivative) {
-                printLine(out, "d/dx behelyettesitve:", derivative->simplify()->toString());
+                printLine(out, "d/dx behelyettesitve:", format(*derivative->simplify()));
             }
         }
 

@@ -1,4 +1,5 @@
 #include "node.h"
+#include "simplify.h"
 #include <sstream>
 #include <cmath>
 
@@ -19,7 +20,7 @@ bool NumberNode::isConstant(const std::string& ) const {
 }
 
 std::unique_ptr<Node> NumberNode::simplifyStep() const {
-    return clone();
+    return buildNumber(value); // 0.5 -> 1/2, so that it matches 1/2 written as a fraction
 }
 
 std::string NumberNode::toString() const {

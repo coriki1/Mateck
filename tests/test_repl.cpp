@@ -30,9 +30,9 @@ namespace {
 
 TEST(Repl, ShowsParsedSimplifiedAndDerivative) {
     std::string out = run("x^3 - 2x\n\n");
-    EXPECT_TRUE(contains(out, line("ertelmezes:", "x^3 - 2 * x"))) << out;
-    EXPECT_TRUE(contains(out, line("egyszerusitve:", "-2 * x + x^3"))) << out;
-    EXPECT_TRUE(contains(out, line("d/dx:", "3 * x^2 - 2"))) << out;
+    EXPECT_TRUE(contains(out, line("ertelmezes:", "x^3 - 2x"))) << out;
+    EXPECT_TRUE(contains(out, line("egyszerusitve:", "x^3 - 2x"))) << out;
+    EXPECT_TRUE(contains(out, line("d/dx:", "3x^2 - 2"))) << out;
 }
 
 TEST(Repl, AllVariablesGiven) {

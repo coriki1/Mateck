@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stdexcept>
 #include "node.h"
+#include "simplify.h"
 #include "errors.h"
 
 namespace {
@@ -355,7 +356,7 @@ std::unique_ptr<Node> FuncNode::simplifyStep() const {
         return std::make_unique<NumberNode>(1.0);
     }
 
-    if (a->numericValue()) { // sin(0) -> 0, but ln(0) or sqrt(-1) stay as they are
+    if (numericFraction(*a)) { // sin(0) -> 0, sin(1/2) -> 0.4794255386, but ln(0) or sqrt(-1) stay as they are
         double v = FuncNode(func, a->clone()).evaluate(Environment{});
         if (std::isfinite(v)) {
             return std::make_unique<NumberNode>(v);

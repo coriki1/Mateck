@@ -183,8 +183,11 @@ std::unique_ptr<Node> BinaryOpNode::simplifyStep() const {
     std::unique_ptr<Node> l = left->simplifyStep();
     std::unique_ptr<Node> r = right->simplifyStep();
 
-    std::optional<double> lv = l->numericValue();
-    std::optional<double> rv = r->numericValue();
+    // for ^ a number fraction counts as a number too, so (1/2)^2 folds like 0.5^2;
+    // + - * leave fractions to simplifySum/simplifyProduct, which keep 1/101 + 1/2 exact
+    bool power = op == BinaryOperator::POW;
+    std::optional<double> lv = power ? numericFraction(*l) : l->numericValue();
+    std::optional<double> rv = power ? numericFraction(*r) : r->numericValue();
 
     // 2 * 3 -> 6, but 1 / 0 stays as it is; division is left to simplifyProduct(), which keeps 1 / 2 exact
     if (lv && rv && op != BinaryOperator::DIV) {

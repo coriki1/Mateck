@@ -138,7 +138,7 @@ TEST(Parser, Constants) {
 
 TEST(Parser, Derivatives) {
     EXPECT_EQ(derivative("x^2 + 3x"), "2 * x + 3");
-    EXPECT_EQ(derivative("sin x^2"), "2 * cos(x^2) * x");
+    EXPECT_EQ(derivative("sin x^2"), "2 * x * cos(x^2)");
     EXPECT_EQ(derivative("e^x"), "e^x");
     EXPECT_EQ(derivative("ln x"), "1 / x");
     EXPECT_EQ(derivative("pi x"), "pi");

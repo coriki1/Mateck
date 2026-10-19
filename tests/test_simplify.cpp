@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "helpers.h"
+#include "format.h"
+#include "parser.h"
 
 /// IDENTITIES AND CONSTANT FOLDING ///
 
@@ -86,6 +88,33 @@ TEST(Simplify, KeepsNumberFractionsExact) {
     EXPECT_EQ(simp(bin(B::MUL, bin(B::DIV, num(1), num(2)), x())), "x / 2");
     EXPECT_EQ(simp(bin(B::ADD, bin(B::DIV, num(1), num(2)), bin(B::DIV, num(1), num(3)))), "5 / 6");
     EXPECT_EQ(simp(bin(B::SUB, x(), bin(B::DIV, num(1), num(2)))), "x - 1 / 2");
+}
+
+// decimals with a denominator up to 100 become exact fractions, so 0.5 and 1/2 meet
+TEST(Simplify, DecimalsWithSmallDenominatorBecomeFractions) {
+    auto nice = [](const std::string& input) { return format(*parse(input)->simplify()); };
+
+    EXPECT_EQ(nice("0.5"), "1/2");
+    EXPECT_EQ(nice("1.5"), "3/2");
+    EXPECT_EQ(nice("0.5x"), "x/2");
+    EXPECT_EQ(nice("0.1 + 0.2"), "3/10");        // 0.30000000000000004 in floating point
+    EXPECT_EQ(nice("0.25x + 0.5x"), "3x/4");
+    EXPECT_EQ(nice("(1/2)^2"), "1/4");
+    EXPECT_EQ(nice("x^0.5"), "x^(1/2)");
+
+    EXPECT_TRUE(*parse("0.5pi")->simplify() == *parse("pi/2")->simplify());
+    EXPECT_TRUE(*parse("x^0.5")->simplify() == *parse("x^(1/2)")->simplify());
+    EXPECT_TRUE(*parse("sin(0.5)")->simplify() == *parse("sin(1/2)")->simplify());
+}
+
+TEST(Simplify, LargeDenominatorsStayAsTheyAre) {
+    auto nice = [](const std::string& input) { return format(*parse(input)->simplify()); };
+
+    EXPECT_EQ(nice("9.81"), "9.81");             // not 981/100
+    EXPECT_EQ(nice("3.14159x"), "3.14159x");
+    EXPECT_EQ(nice("1/101 + 1/2"), "103/202");   // fractions written as fractions stay exact
+    EXPECT_EQ(nice("sin(1)"), "0.8414709848");
+    EXPECT_EQ(nice("4443055.26"), "4443055.26");  // small denominator, but a huge numerator
 }
 
 /// CANONICAL FORM ///

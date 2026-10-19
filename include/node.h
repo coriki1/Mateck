@@ -95,6 +95,9 @@ public:
     VarNode(std::string n) 
         : name(std::move(n)) {}
 
+    /// GETTERS ///
+    const std::string& getName() const { return name; }
+
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;
     std::unique_ptr<Node> clone() const override;
@@ -216,6 +219,10 @@ public:
 
     FuncNode(FunctionType f, std::unique_ptr<Node> a) 
         : func(f), arg(std::move(a)) {}
+
+    /// GETTERS ///
+    FunctionType getFunc() const { return func; }
+    const Node& getArg() const { return *arg; }
 
     double evaluate(const Environment& env) const override;
     std::unique_ptr<Node> differentiate(const std::string& var) const override;

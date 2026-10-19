@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <numeric>
 #include <vector>
 
 #include "simplify.h"
+#include "compare.h"
 
 // Algebraic identities are applied without checking the domain, like most CAS do:
 // 0 * ln(x) becomes 0 and x / x becomes 1, even though they are undefined for some x.
@@ -37,16 +39,26 @@ namespace {
 
     /// HELPERS //////////////////////////////////////////////////////////////////////////
 
-    // canonical order of terms and factors, so that x + 1 and 1 + x end up the same
-    bool canonicalLess(const Node& a, const Node& b) {
-        return a.toString() < b.toString();
-    }
-
     bool isInteger(double v) {
         return std::abs(v) < 1e15 && v == std::round(v);
     }
 
-    // 6/4 -> 3/2, keeps the fraction exact while both parts are integers
+    // 0.75 -> 3/4: the smallest denominator up to MAX_FRACTION_DENOMINATOR that gives v
+    // with a numerator up to MAX_FRACTION_NUMERATOR,
+    // allowing for the rounding error of decimals like 0.1, which has no exact binary form
+    bool smallFraction(double v, double& numerator, double& denominator) {
+        for (double q = 1; q <= MAX_FRACTION_DENOMINATOR; q++) {
+            double p = std::round(v * q);
+            if (std::abs(v * q - p) <= 1e-12 * std::max(1.0, std::abs(v * q)) && std::abs(p) <= MAX_FRACTION_NUMERATOR) {
+                numerator = p;
+                denominator = q;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 6/4 -> 3/2, 0.5/1 -> 1/2; keeps the fraction exact while both parts are integers
     void reduceFraction(double& numerator, double& denominator) {
 
         if (isInteger(numerator) && isInteger(denominator)) {
@@ -56,8 +68,8 @@ namespace {
                 denominator /= g;
             }
         }
-        else {
-            numerator /= denominator;
+        else if (!smallFraction(numerator / denominator, numerator, denominator)) {
+            numerator /= denominator; // 9.81 or sin(1) stays a decimal
             denominator = 1.0;
         }
 
@@ -90,6 +102,10 @@ namespace {
         return std::make_unique<BinaryOpNode>(BinaryOperator::MUL, std::move(acc), std::move(factor));
     }
 
+    void flattenSum(const Node& node, double sign, FlatSum& out);
+    void collectTerms(FlatSum& s);
+    std::unique_ptr<Node> buildSum(const FlatSum& s);
+
     /// PRODUCT //////////////////////////////////////////////////////////////////////////
 
     // 3 / (3 * x)  ->  numerator 3, denominator 3, factors [(x, -1)]
@@ -112,8 +128,8 @@ namespace {
                     flattenProduct(bin->getRight(), !inDenominator, out);
                     return;
 
-                case BinaryOperator::POW: // x^2 -> factor x with exponent 2
-                    if (auto k = bin->getRight().numericValue()) {
+                case BinaryOperator::POW: // x^2 -> factor x with exponent 2, x^(1/2) -> exponent 0.5
+                    if (auto k = numericFraction(bin->getRight())) {
                         out.factors.emplace_back(bin->getLeft().clone(), inDenominator ? -*k : *k);
                         return;
                     }
@@ -135,8 +151,43 @@ namespace {
         out.factors.emplace_back(node.clone(), inDenominator ? -1.0 : 1.0);
     }
 
+    bool isSum(const Node& n) {
+        auto* bin = dynamic_cast<const BinaryOpNode*>(&n);
+        return bin && (bin->getOp() == BinaryOperator::ADD || bin->getOp() == BinaryOperator::SUB);
+    }
+
+    // -x + y -> -(x - y): a sum factor never starts with a negative term, so that
+    // -(A * B) and (-A) * B end up the same; returns false if the sum was left as it is
+    bool negateIfLeadingTermNegative(std::unique_ptr<Node>& sum) {
+
+        FlatSum s;
+        flattenSum(*sum, 1.0, s);
+        collectTerms(s);
+
+        bool negative = s.terms.empty() ? s.constantNumerator < 0 : s.terms[0].numerator < 0;
+        if (!negative) {
+            return false;
+        }
+
+        FlatSum negated;
+        flattenSum(*sum, -1.0, negated);
+        collectTerms(negated);
+        sum = buildSum(negated);
+        return true;
+    }
+
     // x * x^2 / x -> x^2
     void collectFactors(FlatProduct& p) {
+
+        // pull the sign out of sum factors; (-S)^k = (-1)^k S^k only holds for integer k
+        for (auto& [factor, exponent] : p.factors) {
+            bool integerExponent = exponent == std::round(exponent);
+            if (isSum(*factor) && integerExponent && negateIfLeadingTermNegative(factor)) {
+                if (std::fmod(std::abs(exponent), 2.0) == 1.0) {
+                    p.numerator = -p.numerator;
+                }
+            }
+        }
 
         std::vector<std::pair<std::unique_ptr<Node>, double>> merged;
 
@@ -156,7 +207,7 @@ namespace {
             [](const auto& m) { return m.second == 0.0; }), merged.end());
 
         std::sort(merged.begin(), merged.end(),
-            [](const auto& a, const auto& b) { return canonicalLess(*a.first, *b.first); });
+            [](const auto& a, const auto& b) { return compare(*a.first, *b.first) < 0; });
 
         p.factors = std::move(merged);
     }
@@ -179,7 +230,7 @@ namespace {
             double k = std::abs(exponent);
             std::unique_ptr<Node> power = (k == 1.0)
                 ? factor->clone()
-                : std::make_unique<BinaryOpNode>(BinaryOperator::POW, factor->clone(), std::make_unique<NumberNode>(k));
+                : std::make_unique<BinaryOpNode>(BinaryOperator::POW, factor->clone(), buildNumber(k));
 
             if (exponent > 0) {
                 top = multiply(std::move(top), std::move(power));
@@ -251,6 +302,59 @@ namespace {
         out.terms.push_back({numerator, denominator, buildProduct(p)});
     }
 
+    // exponents of the plain variables in a term, e.g. x^2 * y * sin(x) -> {x: 2, y: 1}
+    std::map<std::string, double> monomial(const Node& key) {
+        FlatProduct p;
+        flattenProduct(key, false, p);
+
+        std::map<std::string, double> exponents;
+        for (const auto& [factor, exponent] : p.factors) {
+            if (auto* var = dynamic_cast<const VarNode*>(factor.get())) {
+                exponents[var->getName()] += exponent;
+            }
+        }
+        return exponents;
+    }
+
+    double totalDegree(const std::map<std::string, double>& exponents) {
+        double degree = 0.0;
+        for (const auto& entry : exponents) {
+            degree += entry.second;
+        }
+        return degree;
+    }
+
+    // polynomial order of terms: higher total degree first (x^3 before x), then the exponent
+    // of each variable in alphabetical order (x^2 before x*y before y^2), finally compare()
+    bool termLess(const Term& a, const Term& b) {
+
+        std::map<std::string, double> ma = monomial(*a.key);
+        std::map<std::string, double> mb = monomial(*b.key);
+
+        double da = totalDegree(ma);
+        double db = totalDegree(mb);
+        if (da != db) {
+            return da > db;
+        }
+
+        // walk both maps together, in alphabetical order of the variable names
+        auto ia = ma.begin();
+        auto ib = mb.begin();
+        while (ia != ma.end() || ib != mb.end()) {
+
+            bool takeA = ib == mb.end() || (ia != ma.end() && ia->first <= ib->first);
+            const std::string& name = takeA ? ia->first : ib->first;
+
+            double ea = (ia != ma.end() && ia->first == name) ? (ia++)->second : 0.0;
+            double eb = (ib != mb.end() && ib->first == name) ? (ib++)->second : 0.0;
+            if (ea != eb) {
+                return ea > eb;
+            }
+        }
+
+        return compare(*a.key, *b.key) < 0;
+    }
+
     // x + 1 - x -> 1
     void collectTerms(FlatSum& s) {
 
@@ -273,7 +377,7 @@ namespace {
             [](const Term& t) { return t.numerator == 0.0; }), merged.end());
 
         std::sort(merged.begin(), merged.end(),
-            [](const Term& a, const Term& b) { return canonicalLess(*a.key, *b.key); });
+            [](const Term& a, const Term& b) { return termLess(a, b); });
 
         s.terms = std::move(merged);
     }
@@ -321,6 +425,34 @@ namespace {
 }
 
 /// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////
+
+std::optional<double> numericFraction(const Node& node) {
+
+    if (auto v = node.numericValue()) {
+        return v;
+    }
+
+    auto* bin = dynamic_cast<const BinaryOpNode*>(&node);
+    if (bin && bin->getOp() == BinaryOperator::DIV) {
+        auto numerator = bin->getLeft().numericValue();
+        auto denominator = bin->getRight().numericValue();
+        if (numerator && denominator && *denominator != 0.0) {
+            return *numerator / *denominator;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::unique_ptr<Node> buildNumber(double v) {
+
+    double numerator = v;
+    double denominator = 1.0;
+    if (!isInteger(v) && smallFraction(v, numerator, denominator)) {
+        return buildFraction(numerator, denominator);
+    }
+    return std::make_unique<NumberNode>(v);
+}
 
 std::unique_ptr<Node> simplifySum(const Node& sum) {
     FlatSum s;
