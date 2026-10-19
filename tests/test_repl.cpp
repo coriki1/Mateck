@@ -35,6 +35,17 @@ TEST(Repl, ShowsParsedSimplifiedAndDerivative) {
     EXPECT_TRUE(contains(out, line("d/dx:", "3x^2 - 2"))) << out;
 }
 
+TEST(Repl, ShowsExpandedForm) {
+    std::string out = run("(x + 1)(x - 1)\n\n");
+    EXPECT_TRUE(contains(out, line("egyszerusitve:", "(x + 1)(x - 1)"))) << out;
+    EXPECT_TRUE(contains(out, line("kibontva:", "x^2 - 1"))) << out;
+}
+
+TEST(Repl, ExpandedFormTooLong) {
+    std::string out = run("(x + 1)^60\n\n");
+    EXPECT_TRUE(contains(out, line("kibontva:", "(tul hosszu)"))) << out;
+}
+
 TEST(Repl, AllVariablesGiven) {
     std::string out = run("sin(x + y)\npi/2\n0\n");
     EXPECT_TRUE(contains(out, line("ertek:", "1"))) << out;

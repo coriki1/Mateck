@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "errors.h"
 #include "format.h"
+#include "expand.h"
 
 #include <cmath>
 #include <iomanip>
@@ -83,6 +84,9 @@ namespace {
 
         printLine(out, "ertelmezes:", format(*expr));
         printLine(out, "egyszerusitve:", format(*expr->simplify()));
+
+        std::unique_ptr<Node> expanded = expand(*expr);
+        printLine(out, "kibontva:", expanded ? format(*expanded) : "(tul hosszu)");
 
         std::unique_ptr<Node> derivative; // stays empty for e.g. floor(x)
         try {

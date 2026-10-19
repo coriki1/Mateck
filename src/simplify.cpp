@@ -326,10 +326,9 @@ namespace {
 
     // polynomial order of terms: higher total degree first (x^3 before x), then the exponent
     // of each variable in alphabetical order (x^2 before x*y before y^2), finally compare()
-    bool termLess(const Term& a, const Term& b) {
-
-        std::map<std::string, double> ma = monomial(*a.key);
-        std::map<std::string, double> mb = monomial(*b.key);
+    // ma and mb are monomial(*a.key) and monomial(*b.key), computed once per term by the caller
+    bool termLess(const Term& a, const std::map<std::string, double>& ma,
+                  const Term& b, const std::map<std::string, double>& mb) {
 
         double da = totalDegree(ma);
         double db = totalDegree(mb);
@@ -376,10 +375,21 @@ namespace {
         merged.erase(std::remove_if(merged.begin(), merged.end(),
             [](const Term& t) { return t.numerator == 0.0; }), merged.end());
 
-        std::sort(merged.begin(), merged.end(),
-            [](const Term& a, const Term& b) { return termLess(a, b); });
+        std::vector<std::map<std::string, double>> monomials;
+        for (const Term& term : merged) {
+            monomials.push_back(monomial(*term.key));
+        }
 
-        s.terms = std::move(merged);
+        std::vector<size_t> order(merged.size());
+        std::iota(order.begin(), order.end(), 0);
+        std::sort(order.begin(), order.end(), [&](size_t i, size_t j) {
+            return termLess(merged[i], monomials[i], merged[j], monomials[j]);
+        });
+
+        s.terms.clear();
+        for (size_t i : order) {
+            s.terms.push_back(std::move(merged[i]));
+        }
     }
 
     // coefficient * key, e.g. 2/3 and x -> 2 * x / 3
