@@ -12,7 +12,7 @@
 
 namespace {
 
-    constexpr int LABEL_WIDTH = 22; // fits the longest label, "d/dx behelyettesitve:"
+    constexpr int LABEL_WIDTH = 18; // fits the longest label, "d/dx substituted:"
 
     // values closer to 0 than this are shown as 0, so cos(pi/2) prints 0 instead of 6.12323e-17
     constexpr double ZERO_THRESHOLD = 1e-12;
@@ -23,7 +23,7 @@ namespace {
 
     std::string formatValue(double v) {
         if (!std::isfinite(v)) { // sqrt(-1), 1/0
-            return "nincs ertelmezve";
+            return "undefined";
         }
         if (std::abs(v) < ZERO_THRESHOLD) {
             return "0";
@@ -57,7 +57,7 @@ namespace {
 
                 std::vector<std::string> inner = variables(*parsed);
                 if (!inner.empty()) {
-                    out << "  Hiba: az ertek nem tartalmazhat valtozot (" << inner[0] << ")\n";
+                    out << "  Error: the value cannot contain a variable (" << inner[0] << ")\n";
                     continue;
                 }
 
@@ -65,7 +65,7 @@ namespace {
                 return true;
             }
             catch (const MateckError& e) {
-                out << "  Hiba: " << e.what() << "\n";
+                out << "  Error: " << e.what() << "\n";
             }
         }
     }
@@ -78,15 +78,15 @@ namespace {
             expr = parse(line);
         }
         catch (const MateckError& e) {
-            out << "  Hiba: " << e.what() << "\n";
+            out << "  Error: " << e.what() << "\n";
             return true;
         }
 
-        printLine(out, "ertelmezes:", format(*expr));
-        printLine(out, "egyszerusitve:", format(*expr->simplify()));
+        printLine(out, "parsed:", format(*expr));
+        printLine(out, "simplified:", format(*expr->simplify()));
 
         std::unique_ptr<Node> expanded = expand(*expr);
-        printLine(out, "kibontva:", expanded ? format(*expanded) : "(tul hosszu)");
+        printLine(out, "expanded:", expanded ? format(*expanded) : "(too long)");
 
         std::unique_ptr<Node> derivative; // stays empty for e.g. floor(x)
         try {
@@ -123,15 +123,15 @@ namespace {
         }
 
         if (values.size() == vars.size()) { // nothing left to substitute: show numbers
-            printLine(out, "ertek:", formatValue(expr->evaluate({})));
+            printLine(out, "value:", formatValue(expr->evaluate({})));
             if (derivative) {
-                printLine(out, "d/dx ertek:", formatValue(derivative->evaluate({})));
+                printLine(out, "d/dx value:", formatValue(derivative->evaluate({})));
             }
         }
         else { // some variables stay: show the substituted expression
-            printLine(out, "behelyettesitve:", format(*expr->simplify()));
+            printLine(out, "substituted:", format(*expr->simplify()));
             if (derivative) {
-                printLine(out, "d/dx behelyettesitve:", format(*derivative->simplify()));
+                printLine(out, "d/dx substituted:", format(*derivative->simplify()));
             }
         }
 
