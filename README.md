@@ -1,9 +1,42 @@
 # Mateck
 
-A small symbolic math engine in C++17. It parses expressions written in everyday math notation, simplifies and expands them, differentiates them symbolically and evaluates them with substituted values — with its own lexer, parser and expression tree, and no dependencies outside the standard library.
+A small symbolic math engine in C++17. It parses expressions written in everyday math notation, simplifies and expands them, differentiates them symbolically and evaluates them with substituted values — with its own lexer, parser and expression tree. The math engine depends only on the standard library; the terminal UI uses [FTXUI](https://github.com/ArthurSonzogni/FTXUI).
 
 ```
-$ ./mateck
+╭ Expression ──────────────────────────────────────────────────────────────────────────────────────╮
+│> x^3 - 2x                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭ Derivative ────────────────────────────────────╮╭ Tree   Plot ───────────────────────────────────╮
+│by  x    order  1   2   3                       ││⡀                       ⡇                      ⢀│
+│                                                ││⠘⡄                      ⡇                     ⢀⠎│
+│f              x^3 - 2x                         ││ ⠘⢄                     ⡇                    ⢠⠊ │
+│d/dx           3x^2 - 2                         ││  ⠈⢆                    ⡇                   ⡠⠃  │
+│                                                ││    ⠣⡀                  ⡇                  ⡔⠁  ⢠│
+│value          -1                               ││     ⠑⡄                 ⡇                ⢀⠎   ⡠⠃│
+│d/dx value     1                                ││      ⠈⢢                ⡇               ⡰⠁   ⡰⠁ │
+╰────────────────────────────────────────────────╯│        ⠑⢄              ⡇             ⢠⠊   ⢀⠜   │
+╭ Variables ─────────────────────────────────────╮│         ⠈⠢⡀            ⡇           ⢀⠔⠁   ⡠⠊    │
+│x = 1                                           ││           ⠈⠢⢄          ⡇         ⡠⠔⠁   ⡠⠊      │
+╰────────────────────────────────────────────────╯│⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣤⣒⣒⣙⣫⣉⣉⣑⣒⣒⣢⣤⣄⣇⣀⣀⣀⣀⣀⣀⣀⣔⣊⣀⣀⣀⣠⣔⣊⣀⣀⣀⣀⣤⣤⣤⣤│
+╭ History ───────────────────────────────────────╮│       ⡠⠔⠉       ⠉⠒⠤⢄⣀⣀⣀⣇⣈⣉⣩⠶⠶⠿⠶⠒⠺⠒⠛⠉⠉⠉⠉        │
+│                                                ││     ⢠⠊⢀⣀⣀⣀⡠⠤⠤⠤⠔⠒⠒⠒⠊⠉⠉⠉⠁⡇                       │
+│                                                ││⠒⠒⠒⠊⡝⠉⠉⠁                ⡇                       │
+│                                                ││  ⢀⠎                    ⡇                       │
+│                                                ││ ⢠⠃                     ⡇                       │
+│                                                ││⢠⠃                      ⡇                       │
+│                                                ││⠁                       ⡇                       │
+│                                                ││x: -2.5 .. 2.5   y: -11.99 .. 18.12             │
+│                                                ││── f  ── d/dx  ── tangent                       │
+╰────────────────────────────────────────────────╯╰────────────────────────────────────────────────╯
+ Tab focus   ←→ choose   ↑↓ history   F2 tree/plot   PgUp/PgDn zoom   Esc menu                 v0.1
+```
+
+The terminal UI opens with a main menu leading to two screens, **Evaluation and expansion** and **Symbolic differentiation**. Both update while you type: results on the left, variable values below them, and on the right the expression tree or a plot (F2). The differentiation screen picks the variable and the order (up to 3), shows the gradient of multivariable expressions and draws the function, its derivative and the tangent at the given point.
+
+Without a terminal, or with `--plain`, Mateck runs a line-based mode instead:
+
+```
+$ ./mateck --plain
 > x^3 - 2x
   parsed:           x^3 - 2x
   simplified:       x^3 - 2x
@@ -26,7 +59,7 @@ $ ./mateck
   d/dx substituted: cos(y + 2)
 ```
 
-After each expression the program asks for the value of every variable; an empty answer leaves the variable in place.
+After each expression it asks for the value of every variable; an empty answer leaves the variable in place.
 
 ## Features
 
@@ -36,16 +69,19 @@ After each expression the program asks for the value of every variable; an empty
 - **Symbolic differentiation** — sum, product, quotient, power and chain rules for every supported function
 - **Substitution** — numbers or variable-free expressions (`pi/2`, `sqrt 2`) for some or all variables; a partial substitution gives a simplified expression
 - **Readable output** — compact notation (`2x cos(x^2)`, `5x/6`) that can always be pasted back as input
-- **Error messages with positions** — `Expected ')' but found end of input at column 7`
+- **Error messages with positions** — `Expected ')' but found end of input at column 7`, marked with a `^` under the input in the terminal UI
+- **Terminal UI** — live results, the expression tree, braille plots with zoom, higher derivatives, gradients and tangents, input history
 
 ## Building and running
 
-Requirements: a C++17 compiler (g++) and `make`. Only the tests need an extra library, GoogleTest.
+Requirements: a C++17 compiler (g++), `make` and FTXUI 7, found through `pkg-config`. On Fedora:
 
 ```bash
-make            # builds ./mateck
-./mateck        # interactive mode, quit with Ctrl+D
-make clean      # removes build output
+sudo dnf install ftxui-devel
+make                # builds ./mateck
+./mateck            # terminal UI, quit with Esc on the main menu
+./mateck --plain    # line-based mode, quit with Ctrl+D
+make clean          # removes build output
 ```
 
 ### Tests
@@ -58,7 +94,7 @@ make test                                     # builds and runs all tests
 ./mateck_tests --gtest_filter='Simplify.*'    # run one group
 ```
 
-`make` alone works without GoogleTest installed.
+`make` alone works without GoogleTest installed, and the tests do not need FTXUI.
 
 ## Input syntax
 
@@ -105,12 +141,14 @@ Variables are single letters, so `xy` is `x · y`.
 | Expression tree | `src/node_*.cpp` | numbers, variables, constants, unary and binary operators, functions; each node can evaluate, differentiate, substitute and print itself |
 | Simplification | `src/simplify.cpp`, `src/compare.cpp` | flattens `+`/`−` and `*`/`/` chains into lists, merges equal terms and factors, then rebuilds them in the order defined by `compare()` |
 | Expansion | `src/expand.cpp` | distributes products over sums, merging terms after every step |
-| Output | `src/format.cpp` | user-facing notation; `toString()` gives a fully explicit form for debugging |
-| Interactive mode | `src/repl.cpp` | reads from any `std::istream`, so the whole dialog is unit-tested |
+| Output | `src/format.cpp`, `src/tree.cpp` | user-facing notation; `toString()` gives a fully explicit form for debugging; `drawTree()` draws the expression tree |
+| Session | `src/session.cpp` | everything a UI screen shows, computed from the typed text: results, derivatives, gradient, plot samples; free of FTXUI so it is unit-tested |
+| Terminal UI | `src/tui/` | FTXUI screens that only draw what the session layer computed |
+| Line-based mode | `src/repl.cpp` | reads from any `std::istream`, so the whole dialog is unit-tested |
 
 ## Testing
 
-101 GoogleTest tests cover the lexer, parser, every node type, simplification, expansion, formatting and the interactive dialog. Besides fixed examples, randomized tests check properties over thousands of generated expressions:
+126 GoogleTest tests cover the lexer, parser, every node type, simplification, expansion, formatting, the tree drawing, the session layer behind the terminal UI and the line-based dialog. Besides fixed examples, randomized tests check properties over thousands of generated expressions:
 
 - the formatted output parses back to the same expression,
 - `simplify()` and `expand()` keep the value,
@@ -123,13 +161,13 @@ Variables are single letters, so `xy` is `x · y`.
 - `sqrt(x)` and `x^(1/2)` are treated as different expressions.
 - Decimals become exact fractions only for small denominators (`0.25` → `1/4`, but `9.81` stays).
 - Identities are applied without checking the domain, like most computer algebra systems do: `x/x` becomes `1` although it is undefined at `x = 0`.
-- The interactive mode differentiates by `x` only.
+- The line-based mode differentiates by `x` only; the terminal UI can choose the variable.
 
 ## Roadmap
 
+- [x] Terminal UI with menus, the expression tree and function plots
+- [ ] Numerical integration (already in the main menu as "coming soon")
 - [ ] Command-line mode with flags (`mateck -d x "x^3 - 2x"`) for scripts
-- [ ] Numerical integration
-- [ ] Terminal UI with menus and function plots
 
 ## License
 
