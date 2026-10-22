@@ -2,35 +2,6 @@
 
 A small symbolic math engine in C++17. It parses expressions written in everyday math notation, simplifies and expands them, differentiates them symbolically and evaluates them with substituted values — with its own lexer, parser and expression tree. The math engine depends only on the standard library; the terminal UI uses [FTXUI](https://github.com/ArthurSonzogni/FTXUI).
 
-```
-╭ Expression ──────────────────────────────────────────────────────────────────────────────────────╮
-│> x^3 - 2x                                                                                        │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭ Derivative ────────────────────────────────────╮╭ Tree   Plot ───────────────────────────────────╮
-│by  x    order  1   2   3                       ││⡀                       ⡇                      ⢀│
-│                                                ││⠘⡄                      ⡇                     ⢀⠎│
-│f              x^3 - 2x                         ││ ⠘⢄                     ⡇                    ⢠⠊ │
-│d/dx           3x^2 - 2                         ││  ⠈⢆                    ⡇                   ⡠⠃  │
-│                                                ││    ⠣⡀                  ⡇                  ⡔⠁  ⢠│
-│value          -1                               ││     ⠑⡄                 ⡇                ⢀⠎   ⡠⠃│
-│d/dx value     1                                ││      ⠈⢢                ⡇               ⡰⠁   ⡰⠁ │
-╰────────────────────────────────────────────────╯│        ⠑⢄              ⡇             ⢠⠊   ⢀⠜   │
-╭ Variables ─────────────────────────────────────╮│         ⠈⠢⡀            ⡇           ⢀⠔⠁   ⡠⠊    │
-│x = 1                                           ││           ⠈⠢⢄          ⡇         ⡠⠔⠁   ⡠⠊      │
-╰────────────────────────────────────────────────╯│⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣤⣒⣒⣙⣫⣉⣉⣑⣒⣒⣢⣤⣄⣇⣀⣀⣀⣀⣀⣀⣀⣔⣊⣀⣀⣀⣠⣔⣊⣀⣀⣀⣀⣤⣤⣤⣤│
-╭ History ───────────────────────────────────────╮│       ⡠⠔⠉       ⠉⠒⠤⢄⣀⣀⣀⣇⣈⣉⣩⠶⠶⠿⠶⠒⠺⠒⠛⠉⠉⠉⠉        │
-│                                                ││     ⢠⠊⢀⣀⣀⣀⡠⠤⠤⠤⠔⠒⠒⠒⠊⠉⠉⠉⠁⡇                       │
-│                                                ││⠒⠒⠒⠊⡝⠉⠉⠁                ⡇                       │
-│                                                ││  ⢀⠎                    ⡇                       │
-│                                                ││ ⢠⠃                     ⡇                       │
-│                                                ││⢠⠃                      ⡇                       │
-│                                                ││⠁                       ⡇                       │
-│                                                ││x: -2.5 .. 2.5   y: -11.99 .. 18.12             │
-│                                                ││── f  ── d/dx  ── tangent                       │
-╰────────────────────────────────────────────────╯╰────────────────────────────────────────────────╯
- Tab focus   ←→ choose   ↑↓ history   F2 tree/plot   PgUp/PgDn zoom   Esc menu                 v0.1
-```
-
 The terminal UI opens with a main menu leading to two screens, **Evaluation and expansion** and **Symbolic differentiation**. Both update while you type: results on the left, variable values below them, and on the right the expression tree or a plot (F2). The differentiation screen picks the variable and the order (up to 3), shows the gradient of multivariable expressions and draws the function, its derivative and the tangent at the given point.
 
 Without a terminal, or with `--plain`, Mateck runs a line-based mode instead:
