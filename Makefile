@@ -15,10 +15,13 @@ TEST_SRC = tests/test_lexer.cpp tests/test_nodes.cpp tests/test_simplify.cpp tes
 GTEST_CFLAGS = $(shell pkg-config --cflags gtest_main)
 GTEST_LIBS   = $(shell pkg-config --libs gtest_main)
 
+# Build output: every .o and .d file goes to build/, mirroring the source folders
+BUILD_DIR = build
+
 # Object files
-LIB_OBJ  = $(LIB_SRC:.cpp=.o)
-MAIN_OBJ = main.o
-TEST_OBJ = $(TEST_SRC:.cpp=.o)
+LIB_OBJ  = $(LIB_SRC:%.cpp=$(BUILD_DIR)/%.o)
+MAIN_OBJ = $(BUILD_DIR)/main.o
+TEST_OBJ = $(TEST_SRC:%.cpp=$(BUILD_DIR)/%.o)
 DEP      = $(LIB_OBJ:.o=.d) $(MAIN_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
 # Targets
@@ -39,16 +42,18 @@ $(TEST_TARGET): $(LIB_OBJ) $(TEST_OBJ)
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
-# Compile .cpp -> .o
-%.o: %.cpp
+# Compile .cpp -> build/.../.o, creating the folder first
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-tests/%.o: tests/%.cpp
+$(BUILD_DIR)/tests/%.o: tests/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(GTEST_CFLAGS) -c $< -o $@
 
 # Clean up
 clean:
-	rm -f $(LIB_OBJ) $(MAIN_OBJ) $(TEST_OBJ) $(DEP) $(TARGET) $(TEST_TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET) $(TEST_TARGET)
 
 # Full rebuild
 rebuild: clean all
