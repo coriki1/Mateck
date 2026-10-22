@@ -50,6 +50,10 @@ public:
     // binding strength, used by toString() to decide where parentheses are needed
     virtual int precedence() const = 0;
 
+    // direct subtrees in written order and the node's own symbol, used by drawTree()
+    virtual std::vector<const Node*> children() const = 0;
+    virtual std::string label() const = 0;
+
     // the value of the node if it is a plain number, used by simplify()
     virtual std::optional<double> numericValue() const { return std::nullopt; }
 };
@@ -83,6 +87,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
     std::optional<double> numericValue() const override;
 };
 
@@ -108,6 +114,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
 
 
 };
@@ -136,6 +144,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
 
     // numericValue() is deliberately not overridden, so simplify() keeps 2 * pi instead of 6.28319
 };
@@ -167,6 +177,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
 
 // operator differentiations (helper functions)
 
@@ -208,6 +220,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
 };
 
 /// CHILD CLASS : FUNCNODE ///////////////////////////////////////////////////////////
@@ -234,6 +248,8 @@ public:
     std::string toString() const override;
     bool equals(const Node& other) const override;
     int precedence() const override;
+    std::vector<const Node*> children() const override;
+    std::string label() const override;
 
 private: 
 

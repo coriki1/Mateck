@@ -1,5 +1,6 @@
 #include "node.h"
 #include "simplify.h"
+#include "format.h"
 #include <sstream>
 #include <cmath>
 
@@ -50,4 +51,12 @@ std::unique_ptr<Node> NumberNode::substitute(const std::string&, const Node&) co
 }
 
 void NumberNode::collectVariables(std::vector<std::string>&) const {
+}
+
+std::vector<const Node*> NumberNode::children() const {
+    return {};
+}
+
+std::string NumberNode::label() const {
+    return formatNumber(value);
 }

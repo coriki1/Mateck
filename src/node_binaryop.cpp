@@ -266,3 +266,18 @@ void BinaryOpNode::collectVariables(std::vector<std::string>& out) const {
     left->collectVariables(out);
     right->collectVariables(out);
 }
+
+std::vector<const Node*> BinaryOpNode::children() const {
+    return {left.get(), right.get()};
+}
+
+std::string BinaryOpNode::label() const {
+    switch (op) {
+        case BinaryOperator::ADD: return "+";
+        case BinaryOperator::SUB: return "-";
+        case BinaryOperator::MUL: return "*";
+        case BinaryOperator::DIV: return "/";
+        case BinaryOperator::POW: return "^";
+    }
+    throw std::logic_error("Unknown binary operator");
+}

@@ -79,3 +79,11 @@ std::unique_ptr<Node> UnaryOpNode::substitute(const std::string& var, const Node
 void UnaryOpNode::collectVariables(std::vector<std::string>& out) const {
     arg->collectVariables(out);
 }
+
+std::vector<const Node*> UnaryOpNode::children() const {
+    return {arg.get()};
+}
+
+std::string UnaryOpNode::label() const {
+    return op == UnaryOperator::SUB ? "-" : "+";
+}

@@ -41,3 +41,11 @@ std::unique_ptr<Node> ConstantNode::substitute(const std::string&, const Node&) 
 
 void ConstantNode::collectVariables(std::vector<std::string>&) const {
 }
+
+std::vector<const Node*> ConstantNode::children() const {
+    return {};
+}
+
+std::string ConstantNode::label() const {
+    return name;
+}

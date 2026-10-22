@@ -60,3 +60,11 @@ void VarNode::collectVariables(std::vector<std::string>& out) const {
         out.push_back(name);
     }
 }
+
+std::vector<const Node*> VarNode::children() const {
+    return {};
+}
+
+std::string VarNode::label() const {
+    return name;
+}

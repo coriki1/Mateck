@@ -386,3 +386,11 @@ std::unique_ptr<Node> FuncNode::substitute(const std::string& var, const Node& v
 void FuncNode::collectVariables(std::vector<std::string>& out) const {
     arg->collectVariables(out);
 }
+
+std::vector<const Node*> FuncNode::children() const {
+    return {arg.get()};
+}
+
+std::string FuncNode::label() const {
+    return functionTypeToString(func);
+}
