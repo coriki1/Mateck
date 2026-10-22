@@ -9,6 +9,13 @@ LIB_SRC = src/types.cpp src/token.cpp src/lexer.cpp \
           src/simplify.cpp src/compare.cpp src/format.cpp src/expand.cpp \
           src/tree.cpp src/session.cpp src/parser.cpp src/repl.cpp
 
+# Terminal UI (FTXUI, install with: sudo dnf install ftxui-devel), only linked into the program
+TUI_SRC = src/tui/app.cpp src/tui/main_menu.cpp src/tui/panels.cpp src/tui/plot.cpp \
+          src/tui/evaluate_screen.cpp src/tui/differentiate_screen.cpp
+
+FTXUI_CFLAGS = $(shell pkg-config --cflags ftxui)
+FTXUI_LIBS   = $(shell pkg-config --libs ftxui)
+
 # Tests (GoogleTest, install with: sudo dnf install gtest-devel)
 TEST_SRC = tests/test_lexer.cpp tests/test_nodes.cpp tests/test_simplify.cpp tests/test_parser.cpp \
            tests/test_substitute.cpp tests/test_repl.cpp tests/test_compare.cpp tests/test_format.cpp \
@@ -22,9 +29,10 @@ BUILD_DIR = build
 
 # Object files
 LIB_OBJ  = $(LIB_SRC:%.cpp=$(BUILD_DIR)/%.o)
+TUI_OBJ  = $(TUI_SRC:%.cpp=$(BUILD_DIR)/%.o)
 MAIN_OBJ = $(BUILD_DIR)/main.o
 TEST_OBJ = $(TEST_SRC:%.cpp=$(BUILD_DIR)/%.o)
-DEP      = $(LIB_OBJ:.o=.d) $(MAIN_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
+DEP      = $(LIB_OBJ:.o=.d) $(TUI_OBJ:.o=.d) $(MAIN_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
 # Targets
 TARGET      = mateck
@@ -34,8 +42,8 @@ TEST_TARGET = mateck_tests
 all: $(TARGET)
 
 # Linking
-$(TARGET): $(LIB_OBJ) $(MAIN_OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(TARGET): $(LIB_OBJ) $(TUI_OBJ) $(MAIN_OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(FTXUI_LIBS)
 
 $(TEST_TARGET): $(LIB_OBJ) $(TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(GTEST_LIBS)
@@ -48,6 +56,10 @@ test: $(TEST_TARGET)
 $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/src/tui/%.o: src/tui/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(FTXUI_CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/tests/%.o: tests/%.cpp
 	@mkdir -p $(dir $@)
