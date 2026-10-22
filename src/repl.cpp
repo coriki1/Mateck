@@ -3,8 +3,8 @@
 #include "errors.h"
 #include "format.h"
 #include "expand.h"
+#include "session.h"
 
-#include <cmath>
 #include <iomanip>
 #include <string>
 #include <utility>
@@ -14,21 +14,8 @@ namespace {
 
     constexpr int LABEL_WIDTH = 18; // fits the longest label, "d/dx substituted:"
 
-    // values closer to 0 than this are shown as 0, so cos(pi/2) prints 0 instead of 6.12323e-17
-    constexpr double ZERO_THRESHOLD = 1e-12;
-
     void printLine(std::ostream& out, const std::string& label, const std::string& text) {
         out << "  " << std::left << std::setw(LABEL_WIDTH) << label << text << "\n";
-    }
-
-    std::string formatValue(double v) {
-        if (!std::isfinite(v)) { // sqrt(-1), 1/0
-            return "undefined";
-        }
-        if (std::abs(v) < ZERO_THRESHOLD) {
-            return "0";
-        }
-        return formatNumber(v);
     }
 
     bool isBlank(const std::string& line) {
